@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   WhatsappLogo,
   TwitterLogo,
@@ -10,8 +10,8 @@ import {
   Clock,
   MapPin,
   CurrencyInr,
-} from '@phosphor-icons/react';
-import { cn, formatDateRange, formatCurrency, generateId } from '@/lib/utils';
+} from "@phosphor-icons/react";
+import { cn, formatDateRange, formatCurrency, generateId } from "@/lib/utils";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,62 +47,67 @@ interface SharedTrip {
 // ---------------------------------------------------------------------------
 
 const MOCK_TRIP: SharedTrip = {
-  name: 'Central Europe Autumn',
+  name: "Central Europe Autumn",
   coverUrl:
-    'https://images.unsplash.com/photo-1541849546-216549135759?w=1200&q=80',
-  dateStart: '2025-09-15',
-  dateEnd: '2025-09-28',
-  username: 'wanderlust_kai',
+    "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1400&q=85",
+  dateStart: "2025-09-15",
+  dateEnd: "2025-09-28",
+  username: "wanderlust_kai",
   stops: [
     {
-      id: 's1',
-      city: 'Prague',
-      country: 'Czech Republic',
-      dateStart: '2025-09-15',
-      dateEnd: '2025-09-19',
+      id: "s1",
+      city: "Prague",
+      country: "Czech Republic",
+      dateStart: "2025-09-15",
+      dateEnd: "2025-09-19",
       activities: [
-        { id: 'a1', time: '09:00', name: 'Prague Castle Tour', cost: 500 },
-        { id: 'a2', time: '12:30', name: 'Lunch at Lokal Dlouha', cost: 450 },
-        { id: 'a3', time: '15:00', name: 'Charles Bridge Walk', cost: 0 },
-        { id: 'a4', time: '19:00', name: 'Jazz Dock Evening', cost: 800 },
+        { id: "a1", time: "09:00", name: "Prague Castle Tour", cost: 500 },
+        { id: "a2", time: "12:30", name: "Lunch at Lokal Dlouha", cost: 450 },
+        { id: "a3", time: "15:00", name: "Charles Bridge Walk", cost: 0 },
+        { id: "a4", time: "19:00", name: "Jazz Dock Evening", cost: 800 },
       ],
     },
     {
-      id: 's2',
-      city: 'Vienna',
-      country: 'Austria',
-      dateStart: '2025-09-19',
-      dateEnd: '2025-09-23',
+      id: "s2",
+      city: "Vienna",
+      country: "Austria",
+      dateStart: "2025-09-19",
+      dateEnd: "2025-09-23",
       activities: [
-        { id: 'a5', time: '10:00', name: 'Schonbrunn Palace', cost: 1200 },
-        { id: 'a6', time: '13:00', name: 'Naschmarkt Food Tour', cost: 900 },
-        { id: 'a7', time: '16:00', name: 'Belvedere Museum', cost: 700 },
-        { id: 'a8', time: '20:00', name: 'Opera at Staatsoper', cost: 2500 },
+        { id: "a5", time: "10:00", name: "Schonbrunn Palace", cost: 1200 },
+        { id: "a6", time: "13:00", name: "Naschmarkt Food Tour", cost: 900 },
+        { id: "a7", time: "16:00", name: "Belvedere Museum", cost: 700 },
+        { id: "a8", time: "20:00", name: "Opera at Staatsoper", cost: 2500 },
       ],
     },
     {
-      id: 's3',
-      city: 'Budapest',
-      country: 'Hungary',
-      dateStart: '2025-09-23',
-      dateEnd: '2025-09-26',
+      id: "s3",
+      city: "Budapest",
+      country: "Hungary",
+      dateStart: "2025-09-23",
+      dateEnd: "2025-09-26",
       activities: [
-        { id: 'a9', time: '08:00', name: 'Ruin Bar Crawl', cost: 600 },
-        { id: 'a10', time: '11:00', name: 'Thermal Baths (Szechenyi)', cost: 1000 },
-        { id: 'a11', time: '15:00', name: 'Fishermans Bastion', cost: 0 },
-        { id: 'a12', time: '19:30', name: 'Danube Dinner Cruise', cost: 3000 },
+        { id: "a9", time: "08:00", name: "Ruin Bar Crawl", cost: 600 },
+        {
+          id: "a10",
+          time: "11:00",
+          name: "Thermal Baths (Szechenyi)",
+          cost: 1000,
+        },
+        { id: "a11", time: "15:00", name: "Fishermans Bastion", cost: 0 },
+        { id: "a12", time: "19:30", name: "Danube Dinner Cruise", cost: 3000 },
       ],
     },
     {
-      id: 's4',
-      city: 'Bratislava',
-      country: 'Slovakia',
-      dateStart: '2025-09-26',
-      dateEnd: '2025-09-28',
+      id: "s4",
+      city: "Bratislava",
+      country: "Slovakia",
+      dateStart: "2025-09-26",
+      dateEnd: "2025-09-28",
       activities: [
-        { id: 'a13', time: '10:00', name: 'Bratislava Castle', cost: 400 },
-        { id: 'a14', time: '12:00', name: 'Old Town Walking Tour', cost: 300 },
-        { id: 'a15', time: '16:00', name: 'UFO Bridge Observation', cost: 500 },
+        { id: "a13", time: "10:00", name: "Bratislava Castle", cost: 400 },
+        { id: "a14", time: "12:00", name: "Old Town Walking Tour", cost: 300 },
+        { id: "a15", time: "16:00", name: "UFO Bridge Observation", cost: 500 },
       ],
     },
   ],
@@ -137,13 +142,13 @@ function StopTimelineItem({ stop, index, isLast }: StopTimelineItemProps) {
       </div>
 
       {/* Stop content */}
-      <div className={cn('pb-8 flex-1', isLast && 'pb-0')}>
+      <div className={cn("pb-8 flex-1", isLast && "pb-0")}>
         <div className="mb-3">
           <h3 className="font-display text-xl text-charcoal-800">
             {stop.city}
           </h3>
           <p className="text-sm text-charcoal-400">
-            {stop.country} &middot;{' '}
+            {stop.country} &middot;{" "}
             {formatDateRange(stop.dateStart, stop.dateEnd)}
           </p>
         </div>
@@ -224,18 +229,18 @@ export default function SharePage() {
 
   const handleWhatsApp = useCallback(() => {
     const text = encodeURIComponent(
-      `Check out this trip: ${trip.name} on Traveloop! ${window.location.href}`
+      `Check out this trip: ${trip.name} on Traveloop! ${window.location.href}`,
     );
-    window.open(`https://wa.me/?text=${text}`, '_blank');
+    window.open(`https://wa.me/?text=${text}`, "_blank");
   }, [trip.name]);
 
   const handleTwitter = useCallback(() => {
     const text = encodeURIComponent(
-      `Check out this trip: ${trip.name} on @traveloop!`
+      `Check out this trip: ${trip.name} on @traveloop!`,
     );
     window.open(
       `https://twitter.com/intent/tweet?text=${text}&url=${encodeURIComponent(window.location.href)}`,
-      '_blank'
+      "_blank",
     );
   }, [trip.name]);
 
@@ -263,7 +268,7 @@ export default function SharePage() {
               {trip.name}
             </h1>
             <p className="text-white/80 text-sm md:text-base">
-              {formatDateRange(trip.dateStart, trip.dateEnd)} &middot; by{' '}
+              {formatDateRange(trip.dateStart, trip.dateEnd)} &middot; by{" "}
               <span className="font-medium text-white">@{trip.username}</span>
             </p>
           </motion.div>
@@ -313,14 +318,18 @@ export default function SharePage() {
               label="Twitter"
               onClick={handleTwitter}
             />
-            <ShareButton icon={LinkIcon} label="Copy Link" onClick={handleCopyLink} />
+            <ShareButton
+              icon={LinkIcon}
+              label="Copy Link"
+              onClick={handleCopyLink}
+            />
           </div>
         </div>
 
         {/* Footer branding */}
         <div className="text-center py-6 border-t border-sand-100">
           <p className="text-xs text-charcoal-400">
-            Powered by{' '}
+            Powered by{" "}
             <span className="font-display font-medium text-ember-500">
               Traveloop
             </span>
@@ -359,4 +368,3 @@ export default function SharePage() {
     </div>
   );
 }
-

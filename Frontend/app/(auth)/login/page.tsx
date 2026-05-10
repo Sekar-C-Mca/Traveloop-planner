@@ -1,38 +1,36 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { motion } from 'framer-motion';
-import { Compass, EnvelopeSimple, LockKey, Globe } from '@phosphor-icons/react';
-import { UnderlineInput } from '@/components/ui/underline-input';
-import { TraveloopButton } from '@/components/ui/traveloop-button';
-import { useAuthStore } from '@/store/auth';
-import api from '@/lib/api';
-import type { AuthResponse } from '@/types';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { motion } from "framer-motion";
+import { Compass, EnvelopeSimple, LockKey, Globe } from "@phosphor-icons/react";
+import { UnderlineInput } from "@/components/ui/underline-input";
+import { TraveloopButton } from "@/components/ui/traveloop-button";
+import { useAuthStore } from "@/store/auth";
+import api from "@/lib/api";
+import type { AuthResponse } from "@/types";
+import { cn } from "@/lib/utils";
 
 const loginSchema = z.object({
   email: z
     .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email'),
-  password: z
-    .string()
-    .min(6, 'Password must be at least 6 characters'),
+    .min(1, "Email is required")
+    .email("Please enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
 const TRAVEL_IMAGES = [
-  'https://images.unsplash.com/photo-1506929562872-b034d5099b21?w=400',
-  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae598?w=400',
-  'https://images.unsplash.com/photo-1530789253388-582c4ef3842b?w=400',
-  'https://images.unsplash.com/photo-1507525428034-b723cf961883?w=400',
-  'https://images.unsplash.com/photo-1520250493593-399114814022?w=400',
-  'https://images.unsplash.com/photo-1500530855697-589ab5bec6d5?w=400',
+  "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80",
 ];
 
 const IMAGE_ROTATIONS = [-2, 1.5, -1, 2, -1.5, 1];
@@ -56,15 +54,15 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await api.post<AuthResponse>('/api/auth/login', data);
+      const response = await api.post<AuthResponse>("/api/auth/login", data);
       const { token, user } = response.data;
       setAuth(user, token);
-      router.push('/dashboard');
+      router.push("/dashboard");
     } catch (err: unknown) {
       const message =
         err instanceof Error
           ? err.message
-          : 'Something went wrong. Please try again.';
+          : "Something went wrong. Please try again.";
       setError(message);
     } finally {
       setLoading(false);
@@ -105,7 +103,8 @@ export default function LoginPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8, duration: 0.6 }}
           >
-            &ldquo;Travel is the only thing you buy that makes you richer.&rdquo;
+            &ldquo;Travel is the only thing you buy that makes you
+            richer.&rdquo;
           </motion.blockquote>
         </div>
       </div>
@@ -153,7 +152,7 @@ export default function LoginPage() {
                 label="Email"
                 type="email"
                 placeholder="you@example.com"
-                register={register('email')}
+                register={register("email")}
                 error={errors.email?.message}
                 className="pl-6"
               />
@@ -168,7 +167,7 @@ export default function LoginPage() {
                 label="Password"
                 type="password"
                 placeholder="Enter your password"
-                register={register('password')}
+                register={register("password")}
                 error={errors.password?.message}
                 className="pl-6"
               />
@@ -216,11 +215,11 @@ export default function LoginPage() {
 
           {/* Sign up link */}
           <p className="text-center text-sm text-charcoal-500 mt-8">
-            Don&apos;t have an account?{' '}
+            Don&apos;t have an account?{" "}
             <a
               href="/signup"
               className={cn(
-                'text-ember-500 font-medium hover:text-ember-600 transition-colors'
+                "text-ember-500 font-medium hover:text-ember-600 transition-colors",
               )}
             >
               Sign up

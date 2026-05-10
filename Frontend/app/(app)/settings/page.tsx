@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Gear,
@@ -12,15 +12,15 @@ import {
   Check,
   Globe,
   MapPin,
-} from '@phosphor-icons/react';
-import { cn, generateId } from '@/lib/utils';
-import { Switch } from '@/components/ui/switch';
+} from "@phosphor-icons/react";
+import { cn, generateId } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type SettingsTab = 'profile' | 'preferences' | 'saved' | 'danger';
+type SettingsTab = "profile" | "preferences" | "saved" | "danger";
 
 interface SavedCity {
   id: string;
@@ -35,38 +35,45 @@ interface SavedCity {
 
 const INITIAL_SAVED_CITIES: SavedCity[] = [
   {
-    id: 'c1',
-    name: 'Kyoto',
-    country: 'Japan',
+    id: "c1",
+    name: "Kyoto",
+    country: "Japan",
     imageUrl:
-      'https://images.unsplash.com/photo-1493976040374-85c8e12e0c6e?w=400&q=80',
+      "https://images.unsplash.com/photo-1493976040374-85c8e12e0c6e?auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: 'c2',
-    name: 'Lisbon',
-    country: 'Portugal',
+    id: "c2",
+    name: "Lisbon",
+    country: "Portugal",
     imageUrl:
-      'https://images.unsplash.com/photo-1585208798174-6b4e3d8417fe?w=400&q=80',
+      "https://images.unsplash.com/photo-1585208798174-6b4e3d8417fe?auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: 'c3',
-    name: 'Marrakech',
-    country: 'Morocco',
+    id: "c3",
+    name: "Marrakech",
+    country: "Morocco",
     imageUrl:
-      'https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400&q=80',
+      "https://images.unsplash.com/photo-1597212618440-806262de4f6b?auto=format&fit=crop&w=600&q=80",
   },
   {
-    id: 'c4',
-    name: 'Buenos Aires',
-    country: 'Argentina',
+    id: "c4",
+    name: "Buenos Aires",
+    country: "Argentina",
     imageUrl:
-      'https://images.unsplash.com/photo-1589909202802-8f4dce34d4d3?w=400&q=80',
+      "https://images.unsplash.com/photo-1589909202802-8f4dce34d4d3?auto=format&fit=crop&w=600&q=80",
   },
 ];
 
-const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP'] as const;
-const DATE_FORMATS = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'] as const;
-const LANGUAGES = ['English', 'Hindi', 'Spanish', 'French', 'German', 'Japanese'] as const;
+const CURRENCIES = ["INR", "USD", "EUR", "GBP"] as const;
+const DATE_FORMATS = ["DD/MM/YYYY", "MM/DD/YYYY", "YYYY-MM-DD"] as const;
+const LANGUAGES = [
+  "English",
+  "Hindi",
+  "Spanish",
+  "French",
+  "German",
+  "Japanese",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Tab config
@@ -79,10 +86,10 @@ interface TabConfig {
 }
 
 const TABS: TabConfig[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'preferences', label: 'Preferences', icon: Gear },
-  { id: 'saved', label: 'Saved Places', icon: BookmarkSimple },
-  { id: 'danger', label: 'Danger Zone', icon: Warning },
+  { id: "profile", label: "Profile", icon: User },
+  { id: "preferences", label: "Preferences", icon: Gear },
+  { id: "saved", label: "Saved Places", icon: BookmarkSimple },
+  { id: "danger", label: "Danger Zone", icon: Warning },
 ];
 
 // ---------------------------------------------------------------------------
@@ -90,8 +97,8 @@ const TABS: TabConfig[] = [
 // ---------------------------------------------------------------------------
 
 function ProfileTab() {
-  const [name, setName] = useState('Kai Wanderlust');
-  const [language, setLanguage] = useState<string>('English');
+  const [name, setName] = useState("Kai Wanderlust");
+  const [language, setLanguage] = useState<string>("English");
   const [showToast, setShowToast] = useState(false);
 
   const handleSave = useCallback(() => {
@@ -193,8 +200,8 @@ function ProfileTab() {
 // ---------------------------------------------------------------------------
 
 function PreferencesTab() {
-  const [currency, setCurrency] = useState<string>('INR');
-  const [dateFormat, setDateFormat] = useState<string>('DD/MM/YYYY');
+  const [currency, setCurrency] = useState<string>("INR");
+  const [dateFormat, setDateFormat] = useState<string>("DD/MM/YYYY");
   const [darkMode, setDarkMode] = useState(false);
   const [showToast, setShowToast] = useState(false);
 
@@ -221,10 +228,10 @@ function PreferencesTab() {
               key={cur}
               onClick={() => setCurrency(cur)}
               className={cn(
-                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border',
+                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
                 currency === cur
-                  ? 'bg-ember-500 text-white border-ember-500 shadow-warm'
-                  : 'bg-white text-charcoal-600 border-sand-200 hover:border-sand-300'
+                  ? "bg-ember-500 text-white border-ember-500 shadow-warm"
+                  : "bg-white text-charcoal-600 border-sand-200 hover:border-sand-300",
               )}
             >
               {cur}
@@ -244,10 +251,10 @@ function PreferencesTab() {
               key={fmt}
               onClick={() => setDateFormat(fmt)}
               className={cn(
-                'px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border',
+                "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
                 dateFormat === fmt
-                  ? 'bg-ember-500 text-white border-ember-500 shadow-warm'
-                  : 'bg-white text-charcoal-600 border-sand-200 hover:border-sand-300'
+                  ? "bg-ember-500 text-white border-ember-500 shadow-warm"
+                  : "bg-white text-charcoal-600 border-sand-200 hover:border-sand-300",
               )}
             >
               {fmt}
@@ -268,7 +275,7 @@ function PreferencesTab() {
           checked={darkMode}
           onCheckedChange={setDarkMode}
           className={cn(
-            darkMode && 'bg-ember-500 data-[state=checked]:bg-ember-500'
+            darkMode && "bg-ember-500 data-[state=checked]:bg-ember-500",
           )}
         />
       </div>
@@ -380,8 +387,8 @@ function SavedPlacesTab() {
 // ---------------------------------------------------------------------------
 
 function DangerZoneTab() {
-  const [confirmText, setConfirmText] = useState('');
-  const isConfirmEnabled = confirmText === 'DELETE';
+  const [confirmText, setConfirmText] = useState("");
+  const isConfirmEnabled = confirmText === "DELETE";
 
   return (
     <motion.div
@@ -416,10 +423,10 @@ function DangerZoneTab() {
         <button
           disabled={!isConfirmEnabled}
           className={cn(
-            'pill-button text-sm transition-all duration-200',
+            "pill-button text-sm transition-all duration-200",
             isConfirmEnabled
-              ? 'bg-red-600 text-white hover:bg-red-700 shadow-md'
-              : 'bg-red-100 text-red-300 cursor-not-allowed'
+              ? "bg-red-600 text-white hover:bg-red-700 shadow-md"
+              : "bg-red-100 text-red-300 cursor-not-allowed",
           )}
         >
           Permanently Delete Account
@@ -434,17 +441,17 @@ function DangerZoneTab() {
 // ---------------------------------------------------------------------------
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'profile':
+      case "profile":
         return <ProfileTab />;
-      case 'preferences':
+      case "preferences":
         return <PreferencesTab />;
-      case 'saved':
+      case "saved":
         return <SavedPlacesTab />;
-      case 'danger':
+      case "danger":
         return <DangerZoneTab />;
     }
   };
@@ -473,10 +480,10 @@ export default function SettingsPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200',
+                  "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-200",
                   activeTab === tab.id
-                    ? 'bg-ember-500 text-white shadow-warm'
-                    : 'bg-white text-charcoal-500 border border-sand-200 hover:border-sand-300 hover:text-charcoal-700'
+                    ? "bg-ember-500 text-white shadow-warm"
+                    : "bg-white text-charcoal-500 border border-sand-200 hover:border-sand-300 hover:text-charcoal-700",
                 )}
               >
                 <Icon size={16} />

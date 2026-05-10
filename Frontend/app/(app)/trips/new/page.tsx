@@ -97,7 +97,7 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
           className="h-full rounded-full bg-ember-500"
           initial={false}
           animate={{ width: `${((currentStep + 1) / steps.length) * 100}%` }}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
         />
       </div>
 
@@ -148,16 +148,25 @@ function StepBasicInfo({ form }: { form: ReturnType<typeof useForm<Step1Data>> }
 
   const coverUrl = watch('coverUrl');
   const [imageOk, setImageOk] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
 
   // Validate image URL by attempting to load
   React.useEffect(() => {
     if (!coverUrl) {
       setImageOk(false);
+      setImageLoading(false);
       return;
     }
+    setImageLoading(true);
     const img = new window.Image();
-    img.onload = () => setImageOk(true);
-    img.onerror = () => setImageOk(false);
+    img.onload = () => {
+      setImageOk(true);
+      setImageLoading(false);
+    };
+    img.onerror = () => {
+      setImageOk(false);
+      setImageLoading(false);
+    };
     img.src = coverUrl;
   }, [coverUrl]);
 
@@ -166,7 +175,7 @@ function StepBasicInfo({ form }: { form: ReturnType<typeof useForm<Step1Data>> }
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }}
       className="space-y-6"
     >
       {/* Trip name */}
@@ -268,8 +277,18 @@ function StepBasicInfo({ form }: { form: ReturnType<typeof useForm<Step1Data>> }
         {errors.coverUrl && (
           <p className="text-sm text-red-500">{errors.coverUrl.message}</p>
         )}
+        {/* Loading skeleton */}
+        {imageLoading && (
+          <div className="relative mt-3 h-[180px] overflow-hidden rounded-xl bg-sand-100 animate-pulse" />
+        )}
+        {/* Error state */}
+        {coverUrl && !imageLoading && !imageOk && (
+          <div className="relative mt-3 h-[180px] overflow-hidden rounded-xl bg-red-50 border border-red-200 flex items-center justify-center">
+            <p className="text-sm text-red-600">Failed to load image. Please check the URL.</p>
+          </div>
+        )}
         {/* Live preview */}
-        {coverUrl && imageOk && (
+        {coverUrl && imageOk && !imageLoading && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -281,6 +300,7 @@ function StepBasicInfo({ form }: { form: ReturnType<typeof useForm<Step1Data>> }
               fill
               className="object-cover"
               sizes="600px"
+              priority
             />
           </motion.div>
         )}
@@ -348,7 +368,7 @@ function StepAddCities({
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }}
       className="space-y-6"
     >
       {/* Search bar */}
@@ -532,7 +552,7 @@ function StepReview({
       initial={{ opacity: 0, x: 30 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: 0.2 }}
       className="space-y-6"
     >
       {/* Summary card */}
@@ -546,6 +566,7 @@ function StepReview({
               fill
               className="object-cover"
               sizes="600px"
+              priority
             />
             <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/60 to-transparent" />
             <h2 className="absolute bottom-4 left-4 font-display text-2xl font-bold text-white">
@@ -675,6 +696,7 @@ export default function CreateTripPage() {
   const [budget, setBudget] = useState('');
   const [visibility, setVisibility] = useState<TripVisibility>('public');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<Step1Data>({
     resolver: zodResolver(step1Schema),
@@ -688,6 +710,11 @@ export default function CreateTripPage() {
     },
     mode: 'onChange',
   });
+
+  // Simulate page load completion
+  React.useEffect(() => {
+    setIsLoading(false);
+  }, []);
 
   // Step validation
   const isStep1Valid = form.formState.isValid;
@@ -764,116 +791,149 @@ export default function CreateTripPage() {
     }
   }
 
+  // Keyboard navigation - Ctrl+Enter to submit, Esc to go back
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        if (step < 2) {
+          handleNext();
+        } else {
+          handleSubmit();
+        }
+      } else if (e.key === 'Escape' && step > 0) {
+        handleBack();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [step, isStep1Valid, isSubmitting]);
+
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-      {/* Page header */}
-      <div className="mb-6">
-        <h1 className="font-display text-3xl font-bold text-charcoal-800">
-          Create a New Trip
-        </h1>
-        <p className="mt-1 text-sm text-charcoal-500">
-          Fill in the details to plan your next adventure
-        </p>
-      </div>
+      {isLoading && (
+        <div className="space-y-4">
+          <div className="h-8 bg-sand-100 rounded animate-pulse w-1/3" />
+          <div className="h-4 bg-sand-100 rounded animate-pulse w-1/4" />
+          <div className="mt-8 space-y-4">
+            <div className="h-12 bg-sand-100 rounded-xl animate-pulse" />
+            <div className="h-24 bg-sand-100 rounded-xl animate-pulse" />
+            <div className="h-12 bg-sand-100 rounded-xl animate-pulse" />
+          </div>
+        </div>
+      )}
+      
+      {!isLoading && (
+        <>
+          {/* Page header */}
+          <div className="mb-6">
+            <h1 className="font-display text-3xl font-bold text-charcoal-800">
+              Create a New Trip
+            </h1>
+            <p className="mt-1 text-sm text-charcoal-500">
+              Fill in the details to plan your next adventure
+            </p>
+          </div>
 
-      {/* Step indicator */}
-      <StepIndicator currentStep={step} />
+          {/* Step indicator */}
+          <StepIndicator currentStep={step} />
 
-      {/* Step content */}
-      <AnimatePresence mode="wait">
-        {step === 0 && <StepBasicInfo key="step1" form={form} />}
-        {step === 1 && (
-          <StepAddCities
-            key="step2"
-            cities={cities}
-            onAddCity={handleAddCity}
-            onRemoveCity={handleRemoveCity}
-            onUpdateCity={handleUpdateCity}
-          />
-        )}
-        {step === 2 && (
-          <StepReview
-            key="step3"
-            form={form}
-            cities={cities}
-            budget={budget}
-            visibility={visibility}
-            onBudgetChange={setBudget}
-            onVisibilityChange={setVisibility}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Navigation buttons */}
-      <div className="mt-8 flex items-center justify-between border-t border-sand-100 pt-6">
-        <button
-          type="button"
-          onClick={handleBack}
-          disabled={step === 0}
-          className={cn(
-            'pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-colors hover:bg-sand-50',
-            step === 0 && 'cursor-not-allowed opacity-40'
-          )}
-        >
-          <ArrowLeft size={18} />
-          Back
-        </button>
-
-        {step < 2 ? (
-          <button
-            type="button"
-            onClick={handleNext}
-            disabled={step === 0 && !isStep1Valid}
-            className={cn(
-              'pill-button inline-flex items-center gap-2 bg-ember-500 text-white transition-colors hover:bg-ember-600',
-              step === 0 && !isStep1Valid && 'cursor-not-allowed opacity-50'
+          {/* Step content */}
+          <AnimatePresence mode="wait">
+            {step === 0 && <StepBasicInfo key="step1" form={form} />}
+            {step === 1 && (
+              <StepAddCities
+                key="step2"
+                cities={cities}
+                onAddCity={handleAddCity}
+                onRemoveCity={handleRemoveCity}
+                onUpdateCity={handleUpdateCity}
+              />
             )}
-          >
-            Next
-            <ArrowRight size={18} />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-            className={cn(
-              'pill-button inline-flex items-center gap-2 bg-forest-500 text-white transition-colors hover:bg-forest-600',
-              isSubmitting && 'cursor-not-allowed opacity-70'
+            {step === 2 && (
+              <StepReview
+                key="step3"
+                form={form}
+                cities={cities}
+                budget={budget}
+                visibility={visibility}
+                onBudgetChange={setBudget}
+                onVisibilityChange={setVisibility}
+              />
             )}
-          >
-            {isSubmitting ? (
-              <>
-                <svg
-                  className="h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  />
-                </svg>
-                Creating...
-              </>
+          </AnimatePresence>
+
+          {/* Navigation buttons */}
+          <div className="mt-8 flex items-center justify-between border-t border-sand-100 pt-6">
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={step === 0}
+              className={cn(
+                'pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-colors hover:bg-sand-50',
+                step === 0 && 'cursor-not-allowed opacity-40'
+              )}
+            >
+              <ArrowLeft size={18} />
+              Back
+            </button>
+
+            {step < 2 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                disabled={step === 0 && !isStep1Valid}
+                className={cn(
+                  'pill-button inline-flex items-center gap-2 bg-ember-500 text-white transition-colors hover:bg-ember-600',
+                  step === 0 && !isStep1Valid && 'cursor-not-allowed opacity-50'
+                )}
+              >
+                Next
+                <ArrowRight size={18} />
+              </button>
             ) : (
-              <>
-                <Check size={18} weight="bold" />
-                Create Trip
-              </>
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={cn(
+                  'pill-button inline-flex items-center gap-2 bg-forest-500 text-white transition-colors hover:bg-forest-600',
+                  isSubmitting && 'cursor-not-allowed opacity-70'
+                )}
+              >
+                {isSubmitting ? (
+                  <>
+                    <svg
+                      className="h-4 w-4 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} weight="bold" />
+                    Create Trip
+                  </>
+                )}
+              </button>
             )}
-          </button>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

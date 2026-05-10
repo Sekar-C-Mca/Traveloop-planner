@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion, useInView, useMotionValue, useSpring } from 'framer-motion';
+import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import {
   MapTrifold,
   Globe,
@@ -15,9 +15,9 @@ import {
   PlusCircle,
   Compass,
   Backpack,
-} from '@phosphor-icons/react';
-import { cn } from '@/lib/utils';
-import { useAuthStore } from '@/store/auth';
+} from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -51,59 +51,139 @@ interface TrendingCity {
 // ---------------------------------------------------------------------------
 
 const stats: StatCard[] = [
-  { label: 'Total Trips', value: 12, icon: MapTrifold, color: 'text-ember-500' },
-  { label: 'Countries Visited', value: 5, icon: Globe, color: 'text-forest-500' },
-  { label: 'Days Travelled', value: 47, icon: CalendarBlank, color: 'text-sand-500' },
-  { label: 'Upcoming Trips', value: 3, icon: Clock, color: 'text-charcoal-500' },
+  {
+    label: "Total Trips",
+    value: 12,
+    icon: MapTrifold,
+    color: "text-ember-500",
+  },
+  {
+    label: "Countries Visited",
+    value: 5,
+    icon: Globe,
+    color: "text-forest-500",
+  },
+  {
+    label: "Days Travelled",
+    value: 47,
+    icon: CalendarBlank,
+    color: "text-sand-500",
+  },
+  {
+    label: "Upcoming Trips",
+    value: 3,
+    icon: Clock,
+    color: "text-charcoal-500",
+  },
 ];
 
 const upcomingTrips: UpcomingTrip[] = [
   {
-    id: '1',
-    name: 'Rajasthan Road Trip',
-    coverUrl: 'https://images.unsplash.com/photo-1524492412937-b2890037b725?w=600',
-    dateRange: '15 Jul – 28 Jul 2026',
+    id: "1",
+    name: "Rajasthan Road Trip",
+    coverUrl:
+      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=800&q=80",
+    dateRange: "15 Jul – 28 Jul 2026",
     cityCount: 4,
     budget: 45000,
   },
   {
-    id: '2',
-    name: 'Bali Wellness Retreat',
-    coverUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=600',
-    dateRange: '10 Aug – 20 Aug 2026',
+    id: "2",
+    name: "Bali Wellness Retreat",
+    coverUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80",
+    dateRange: "10 Aug – 20 Aug 2026",
     cityCount: 2,
     budget: 72000,
   },
   {
-    id: '3',
-    name: 'Goa Beach Escape',
-    coverUrl: 'https://images.unsplash.com/photo-1506929562872-b034d5099b21?w=600',
-    dateRange: '1 Sep – 7 Sep 2026',
+    id: "3",
+    name: "Goa Beach Escape",
+    coverUrl:
+      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=800&q=80",
+    dateRange: "1 Sep – 7 Sep 2026",
     cityCount: 1,
     budget: 25000,
   },
 ];
 
 const trendingCities: TrendingCity[] = [
-  { name: 'Jaipur', country: 'India', imageUrl: 'https://images.unsplash.com/photo-1524492412937-b2890037b725?w=300', costIndex: 1 },
-  { name: 'Bali', country: 'Indonesia', imageUrl: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae598?w=300', costIndex: 2 },
-  { name: 'Tokyo', country: 'Japan', imageUrl: 'https://images.unsplash.com/photo-1530789253388-582c4ef3842b?w=300', costIndex: 3 },
-  { name: 'Goa', country: 'India', imageUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961883?w=300', costIndex: 1 },
-  { name: 'Paris', country: 'France', imageUrl: 'https://images.unsplash.com/photo-1520250493593-399114814022?w=300', costIndex: 3 },
-  { name: 'Dubai', country: 'UAE', imageUrl: 'https://images.unsplash.com/photo-1500530855697-589ab5bec6d5?w=300', costIndex: 3 },
-  { name: 'Rome', country: 'Italy', imageUrl: 'https://images.unsplash.com/photo-1493976080388-7188966d5ee6?w=300', costIndex: 3 },
-  { name: 'Barcelona', country: 'Spain', imageUrl: 'https://images.unsplash.com/photo-1504893524553-b855bce13c26?w=300', costIndex: 2 },
+  {
+    name: "Jaipur",
+    country: "India",
+    imageUrl:
+      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=400&q=80",
+    costIndex: 1,
+  },
+  {
+    name: "Bali",
+    country: "Indonesia",
+    imageUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=400&q=80",
+    costIndex: 2,
+  },
+  {
+    name: "Tokyo",
+    country: "Japan",
+    imageUrl:
+      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=400&q=80",
+    costIndex: 3,
+  },
+  {
+    name: "Goa",
+    country: "India",
+    imageUrl:
+      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=400&q=80",
+    costIndex: 1,
+  },
+  {
+    name: "Paris",
+    country: "France",
+    imageUrl:
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
+    costIndex: 3,
+  },
+  {
+    name: "Dubai",
+    country: "UAE",
+    imageUrl:
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=400&q=80",
+    costIndex: 3,
+  },
+  {
+    name: "Rome",
+    country: "Italy",
+    imageUrl:
+      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=400&q=80",
+    costIndex: 3,
+  },
+  {
+    name: "Barcelona",
+    country: "Spain",
+    imageUrl:
+      "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=400&q=80",
+    costIndex: 2,
+  },
 ];
 
 // ---------------------------------------------------------------------------
 // Animated counter component
 // ---------------------------------------------------------------------------
 
-function AnimatedCounter({ value, duration = 1.2 }: { value: number; duration?: number }) {
+function AnimatedCounter({
+  value,
+  duration = 1.2,
+}: {
+  value: number;
+  duration?: number;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
   const motionVal = useMotionValue(0);
-  const springVal = useSpring(motionVal, { bounce: 0, duration: duration * 1000 });
+  const springVal = useSpring(motionVal, {
+    bounce: 0,
+    duration: duration * 1000,
+  });
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
@@ -113,7 +193,7 @@ function AnimatedCounter({ value, duration = 1.2 }: { value: number; duration?: 
   }, [isInView, motionVal, value]);
 
   useEffect(() => {
-    const unsubscribe = springVal.on('change', (latest) => {
+    const unsubscribe = springVal.on("change", (latest) => {
       setDisplay(Math.round(latest));
     });
     return unsubscribe;
@@ -134,7 +214,12 @@ function StatCard({ label, value, icon: Icon, color }: StatCard) {
       transition={{ duration: 0.4 }}
       className="warm-card flex items-center gap-4 p-5"
     >
-      <div className={cn('flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sand-50', color)}>
+      <div
+        className={cn(
+          "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sand-50",
+          color,
+        )}
+      >
         <Icon size={24} weight="duotone" />
       </div>
       <div>
@@ -179,11 +264,19 @@ function TripCard({ trip }: { trip: UpcomingTrip }) {
           </div>
           <div className="flex items-center gap-2 text-sm text-charcoal-600">
             <MapPin size={16} className="text-charcoal-400" />
-            <span>{trip.cityCount} {trip.cityCount === 1 ? 'city' : 'cities'}</span>
+            <span>
+              {trip.cityCount} {trip.cityCount === 1 ? "city" : "cities"}
+            </span>
           </div>
           <div className="flex items-center gap-2 text-sm text-charcoal-600">
             <CurrencyInr size={16} className="text-charcoal-400" />
-            <span>{new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(trip.budget)}</span>
+            <span>
+              {new Intl.NumberFormat("en-IN", {
+                style: "currency",
+                currency: "INR",
+                maximumFractionDigits: 0,
+              }).format(trip.budget)}
+            </span>
           </div>
         </div>
       </div>
@@ -196,9 +289,9 @@ function TripCard({ trip }: { trip: UpcomingTrip }) {
 // ---------------------------------------------------------------------------
 
 function costLabel(index: number): string {
-  if (index <= 1) return '$';
-  if (index <= 2) return '$$';
-  return '$$$';
+  if (index <= 1) return "$";
+  if (index <= 2) return "$$";
+  return "$$$";
 }
 
 function CityCard({ city }: { city: TrendingCity }) {
@@ -221,7 +314,9 @@ function CityCard({ city }: { city: TrendingCity }) {
         <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/80 via-charcoal-900/30 to-transparent" />
         {/* Content */}
         <div className="absolute inset-x-0 bottom-0 p-3">
-          <p className="font-display text-base font-semibold text-white">{city.name}</p>
+          <p className="font-display text-base font-semibold text-white">
+            {city.name}
+          </p>
           <p className="text-xs text-sand-200">{city.country}</p>
         </div>
         {/* Cost badge */}
@@ -246,9 +341,27 @@ interface QuickAction {
 }
 
 const quickActions: QuickAction[] = [
-  { label: 'Plan New Trip', icon: PlusCircle, href: '/trips/new', color: 'text-ember-500', bg: 'bg-ember-50 hover:bg-ember-100' },
-  { label: 'Browse Cities', icon: Compass, href: '/explore', color: 'text-forest-500', bg: 'bg-forest-50 hover:bg-forest-100' },
-  { label: 'View Packing List', icon: Backpack, href: '/trips', color: 'text-sand-500', bg: 'bg-sand-50 hover:bg-sand-100' },
+  {
+    label: "Plan New Trip",
+    icon: PlusCircle,
+    href: "/trips/new",
+    color: "text-ember-500",
+    bg: "bg-ember-50 hover:bg-ember-100",
+  },
+  {
+    label: "Browse Cities",
+    icon: Compass,
+    href: "/explore",
+    color: "text-forest-500",
+    bg: "bg-forest-50 hover:bg-forest-100",
+  },
+  {
+    label: "View Packing List",
+    icon: Backpack,
+    href: "/trips",
+    color: "text-sand-500",
+    bg: "bg-sand-50 hover:bg-sand-100",
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -257,22 +370,22 @@ const quickActions: QuickAction[] = [
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
-  const firstName = user?.name?.split(' ')[0] ?? 'Traveler';
+  const firstName = user?.name?.split(" ")[0] ?? "Traveler";
 
   return (
     <div className="space-y-8">
       {/* Welcome banner */}
-      <section className="rounded-2xl bg-gradient-to-r from-sand-50 to-cream px-6 py-8 md:px-8 md:py-10">
-        <h1 className="font-display text-3xl md:text-4xl font-bold text-charcoal-800">
+      <section className="rounded-2xl bg-gradient-to-r from-sand-50 to-cream px-4 py-6 sm:px-6 sm:py-8 md:px-8 md:py-10">
+        <h1 className="font-display text-2xl sm:text-3xl md:text-4xl font-bold text-charcoal-800">
           Ready to wander, {firstName}?
         </h1>
-        <p className="mt-2 text-charcoal-500">
+        <p className="mt-1 sm:mt-2 text-sm sm:text-base text-charcoal-500">
           Your next adventure is just a few clicks away.
         </p>
       </section>
 
       {/* Stats row */}
-      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {stats.map((stat) => (
           <StatCard key={stat.label} {...stat} />
         ))}
@@ -283,7 +396,7 @@ export default function DashboardPage() {
         <h2 className="font-display text-xl font-semibold text-charcoal-800">
           Your upcoming trips
         </h2>
-        <div className="mt-4 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 sm:mt-4 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {upcomingTrips.map((trip) => (
             <TripCard key={trip.id} trip={trip} />
           ))}
@@ -309,7 +422,7 @@ export default function DashboardPage() {
         <h2 className="font-display text-xl font-semibold text-charcoal-800">
           Quick Actions
         </h2>
-        <div className="mt-4 flex flex-wrap gap-3">
+        <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 sm:gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
             return (
@@ -317,9 +430,9 @@ export default function DashboardPage() {
                 key={action.label}
                 href={action.href}
                 className={cn(
-                  'pill-button inline-flex items-center gap-2 border border-transparent transition-colors',
+                  "pill-button inline-flex items-center gap-2 border border-transparent transition-colors",
                   action.bg,
-                  action.color
+                  action.color,
                 )}
               >
                 <Icon size={20} weight="duotone" />

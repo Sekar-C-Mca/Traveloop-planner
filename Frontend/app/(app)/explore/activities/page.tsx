@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
-import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useCallback } from "react";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MagnifyingGlass,
   Funnel,
@@ -14,13 +14,13 @@ import {
   SlidersHorizontal,
   X,
   Check,
-} from '@phosphor-icons/react';
-import { cn } from '@/lib/utils';
-import { costIndexLabel } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
+} from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import { costIndexLabel } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Drawer,
   DrawerContent,
@@ -28,26 +28,26 @@ import {
   DrawerTitle,
   DrawerDescription,
   DrawerFooter,
-} from '@/components/ui/drawer';
+} from "@/components/ui/drawer";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 type ActivityCategory =
-  | 'Adventure'
-  | 'Culture'
-  | 'Food'
-  | 'Nature'
-  | 'Shopping'
-  | 'Nightlife';
+  | "Adventure"
+  | "Culture"
+  | "Food"
+  | "Nature"
+  | "Shopping"
+  | "Nightlife";
 
 interface Activity {
   id: string;
@@ -77,21 +77,21 @@ interface Stop {
 // ---------------------------------------------------------------------------
 
 const categories: ActivityCategory[] = [
-  'Adventure',
-  'Culture',
-  'Food',
-  'Nature',
-  'Shopping',
-  'Nightlife',
+  "Adventure",
+  "Culture",
+  "Food",
+  "Nature",
+  "Shopping",
+  "Nightlife",
 ];
 
 const categoryColors: Record<ActivityCategory, string> = {
-  Adventure: 'bg-ember-100 text-ember-700',
-  Culture: 'bg-forest-100 text-forest-700',
-  Food: 'bg-sand-200 text-sand-700',
-  Nature: 'bg-forest-50 text-forest-600',
-  Shopping: 'bg-sand-100 text-sand-600',
-  Nightlife: 'bg-charcoal-100 text-charcoal-700',
+  Adventure: "bg-ember-100 text-ember-700",
+  Culture: "bg-forest-100 text-forest-700",
+  Food: "bg-sand-200 text-sand-700",
+  Nature: "bg-forest-50 text-forest-600",
+  Shopping: "bg-sand-100 text-sand-600",
+  Nightlife: "bg-charcoal-100 text-charcoal-700",
 };
 
 // ---------------------------------------------------------------------------
@@ -100,166 +100,176 @@ const categoryColors: Record<ActivityCategory, string> = {
 
 const mockActivities: Activity[] = [
   {
-    id: '1',
-    name: 'Sunrise Trek to Mount Batur',
-    category: 'Adventure',
-    imageUrl: 'https://images.unsplash.com/photo-1530538095376-4971c50e5327?w=400',
+    id: "1",
+    name: "Sunrise Trek to Mount Batur",
+    category: "Adventure",
+    imageUrl:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=600&q=80",
     cost: 45,
     durationHours: 6,
-    city: 'Bali',
-    cityId: '2',
+    city: "Bali",
+    cityId: "2",
   },
   {
-    id: '2',
-    name: 'Sushi Making Masterclass',
-    category: 'Food',
-    imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02e5d4523a?w=400',
+    id: "2",
+    name: "Sushi Making Masterclass",
+    category: "Food",
+    imageUrl:
+      "https://images.unsplash.com/photo-1611143669185-af224c5e3252?auto=format&fit=crop&w=600&q=80",
     cost: 80,
     durationHours: 3,
-    city: 'Tokyo',
-    cityId: '3',
+    city: "Tokyo",
+    cityId: "3",
   },
   {
-    id: '3',
-    name: 'Street Food Tour of Old Delhi',
-    category: 'Food',
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+    id: "3",
+    name: "Street Food Tour of Old Delhi",
+    category: "Food",
+    imageUrl:
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=600&q=80",
     cost: 25,
     durationHours: 4,
-    city: 'Jaipur',
-    cityId: '1',
+    city: "Jaipur",
+    cityId: "1",
   },
   {
-    id: '4',
-    name: 'Surfing Lessons at Kuta Beach',
-    category: 'Adventure',
-    imageUrl: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae598?w=400',
+    id: "4",
+    name: "Surfing Lessons at Kuta Beach",
+    category: "Adventure",
+    imageUrl:
+      "https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=600&q=80",
     cost: 35,
     durationHours: 2,
-    city: 'Bali',
-    cityId: '2',
+    city: "Bali",
+    cityId: "2",
   },
   {
-    id: '5',
-    name: 'Louvre Museum Guided Tour',
-    category: 'Culture',
-    imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+    id: "5",
+    name: "Louvre Museum Guided Tour",
+    category: "Culture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=600&q=80",
     cost: 60,
     durationHours: 4,
-    city: 'Paris',
-    cityId: '5',
+    city: "Paris",
+    cityId: "5",
   },
   {
-    id: '6',
-    name: 'Colosseum Underground Tour',
-    category: 'Culture',
-    imageUrl: 'https://images.unsplash.com/photo-1530538095376-4971c50e5327?w=400',
+    id: "6",
+    name: "Colosseum Underground Tour",
+    category: "Culture",
+    imageUrl:
+      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=600&q=80",
     cost: 55,
     durationHours: 3,
-    city: 'Rome',
-    cityId: '7',
+    city: "Rome",
+    cityId: "7",
   },
   {
-    id: '7',
-    name: 'Central Park Bike Tour',
-    category: 'Nature',
-    imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02e5d4523a?w=400',
+    id: "7",
+    name: "Central Park Bike Tour",
+    category: "Nature",
+    imageUrl:
+      "https://images.unsplash.com/photo-1534430480872-3498386e7856?auto=format&fit=crop&w=600&q=80",
     cost: 40,
     durationHours: 2,
-    city: 'New York',
-    cityId: '10',
+    city: "New York",
+    cityId: "10",
   },
   {
-    id: '8',
-    name: 'La Boqueria Market Walk',
-    category: 'Shopping',
-    imageUrl: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400',
+    id: "8",
+    name: "La Boqueria Market Walk",
+    category: "Shopping",
+    imageUrl:
+      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?auto=format&fit=crop&w=600&q=80",
     cost: 15,
     durationHours: 2,
-    city: 'Barcelona',
-    cityId: '8',
+    city: "Barcelona",
+    cityId: "8",
   },
   {
-    id: '9',
-    name: 'Table Mountain Sunset Hike',
-    category: 'Nature',
-    imageUrl: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae598?w=400',
+    id: "9",
+    name: "Table Mountain Sunset Hike",
+    category: "Nature",
+    imageUrl:
+      "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?auto=format&fit=crop&w=600&q=80",
     cost: 20,
     durationHours: 4,
-    city: 'Cape Town',
-    cityId: '12',
+    city: "Cape Town",
+    cityId: "12",
   },
   {
-    id: '10',
-    name: 'Rooftop Bar Hopping in Dubai',
-    category: 'Nightlife',
-    imageUrl: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=400',
+    id: "10",
+    name: "Rooftop Bar Hopping in Dubai",
+    category: "Nightlife",
+    imageUrl:
+      "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
     cost: 90,
     durationHours: 4,
-    city: 'Dubai',
-    cityId: '6',
+    city: "Dubai",
+    cityId: "6",
   },
   {
-    id: '11',
-    name: 'Camel Safari in Thar Desert',
-    category: 'Adventure',
-    imageUrl: 'https://images.unsplash.com/photo-1530538095376-4971c50e5327?w=400',
+    id: "11",
+    name: "Camel Safari in Thar Desert",
+    category: "Adventure",
+    imageUrl:
+      "https://images.unsplash.com/photo-1548634928-df54e7d8d4e2?auto=format&fit=crop&w=600&q=80",
     cost: 30,
     durationHours: 5,
-    city: 'Jaipur',
-    cityId: '1',
+    city: "Jaipur",
+    cityId: "1",
   },
   {
-    id: '12',
-    name: 'Shoreditch Nightlife Crawl',
-    category: 'Nightlife',
-    imageUrl: 'https://images.unsplash.com/photo-1469854523086-cc02e5d4523a?w=400',
+    id: "12",
+    name: "Shoreditch Nightlife Crawl",
+    category: "Nightlife",
+    imageUrl:
+      "https://images.unsplash.com/photo-1518391846015-55a9cc003b25?auto=format&fit=crop&w=600&q=80",
     cost: 50,
     durationHours: 4,
-    city: 'London',
-    cityId: '9',
+    city: "London",
+    cityId: "9",
   },
 ];
 
 const mockTrips: Trip[] = [
   {
-    id: '1',
-    name: 'Rajasthan Road Trip',
+    id: "1",
+    name: "Rajasthan Road Trip",
     stops: [
-      { id: 's1', name: 'Jaipur Stop', cityId: '1' },
-      { id: 's2', name: 'Jodhpur Stop', cityId: '1' },
+      { id: "s1", name: "Jaipur Stop", cityId: "1" },
+      { id: "s2", name: "Jodhpur Stop", cityId: "1" },
     ],
   },
   {
-    id: '2',
-    name: 'Bali Wellness Retreat',
+    id: "2",
+    name: "Bali Wellness Retreat",
     stops: [
-      { id: 's3', name: 'Ubud Stop', cityId: '2' },
-      { id: 's4', name: 'Seminyak Stop', cityId: '2' },
+      { id: "s3", name: "Ubud Stop", cityId: "2" },
+      { id: "s4", name: "Seminyak Stop", cityId: "2" },
     ],
   },
   {
-    id: '3',
-    name: 'Goa Beach Escape',
+    id: "3",
+    name: "Goa Beach Escape",
+    stops: [{ id: "s5", name: "North Goa Stop", cityId: "4" }],
+  },
+  {
+    id: "4",
+    name: "European Summer",
     stops: [
-      { id: 's5', name: 'North Goa Stop', cityId: '4' },
+      { id: "s6", name: "Paris Stop", cityId: "5" },
+      { id: "s7", name: "Rome Stop", cityId: "7" },
+      { id: "s8", name: "Barcelona Stop", cityId: "8" },
     ],
   },
   {
-    id: '4',
-    name: 'European Summer',
+    id: "5",
+    name: "Tokyo Explorer",
     stops: [
-      { id: 's6', name: 'Paris Stop', cityId: '5' },
-      { id: 's7', name: 'Rome Stop', cityId: '7' },
-      { id: 's8', name: 'Barcelona Stop', cityId: '8' },
-    ],
-  },
-  {
-    id: '5',
-    name: 'Tokyo Explorer',
-    stops: [
-      { id: 's9', name: 'Shibuya Stop', cityId: '3' },
-      { id: 's10', name: 'Asakusa Stop', cityId: '3' },
+      { id: "s9", name: "Shibuya Stop", cityId: "3" },
+      { id: "s10", name: "Asakusa Stop", cityId: "3" },
     ],
   },
 ];
@@ -275,27 +285,29 @@ interface AddToTripDrawerProps {
   onConfirm: (tripId: string, stopId: string, time: string) => void;
 }
 
-function AddToTripDrawer({ open, activityName, onClose, onConfirm }: AddToTripDrawerProps) {
-  const [selectedTrip, setSelectedTrip] = useState<string>('');
-  const [selectedStop, setSelectedStop] = useState<string>('');
-  const [time, setTime] = useState<string>('09:00');
+function AddToTripDrawer({
+  open,
+  activityName,
+  onClose,
+  onConfirm,
+}: AddToTripDrawerProps) {
+  const [selectedTrip, setSelectedTrip] = useState<string>("");
+  const [selectedStop, setSelectedStop] = useState<string>("");
+  const [time, setTime] = useState<string>("09:00");
 
   const currentTrip = useMemo(
     () => mockTrips.find((t) => t.id === selectedTrip),
-    [selectedTrip]
+    [selectedTrip],
   );
 
-  const availableStops = useMemo(
-    () => currentTrip?.stops ?? [],
-    [currentTrip]
-  );
+  const availableStops = useMemo(() => currentTrip?.stops ?? [], [currentTrip]);
 
   const handleConfirm = useCallback(() => {
     if (selectedTrip && selectedStop && time) {
       onConfirm(selectedTrip, selectedStop, time);
-      setSelectedTrip('');
-      setSelectedStop('');
-      setTime('09:00');
+      setSelectedTrip("");
+      setSelectedStop("");
+      setTime("09:00");
       onClose();
     }
   }, [selectedTrip, selectedStop, time, onConfirm, onClose]);
@@ -303,13 +315,13 @@ function AddToTripDrawer({ open, activityName, onClose, onConfirm }: AddToTripDr
   const handleOpenChange = useCallback(
     (v: boolean) => {
       if (!v) {
-        setSelectedTrip('');
-        setSelectedStop('');
-        setTime('09:00');
+        setSelectedTrip("");
+        setSelectedStop("");
+        setTime("09:00");
         onClose();
       }
     },
-    [onClose]
+    [onClose],
   );
 
   return (
@@ -330,7 +342,7 @@ function AddToTripDrawer({ open, activityName, onClose, onConfirm }: AddToTripDr
               value={selectedTrip}
               onValueChange={(v) => {
                 setSelectedTrip(v);
-                setSelectedStop('');
+                setSelectedStop("");
               }}
             >
               <SelectTrigger id="trip-select" className="w-full">
@@ -349,9 +361,17 @@ function AddToTripDrawer({ open, activityName, onClose, onConfirm }: AddToTripDr
           {/* Select stop */}
           <div className="space-y-2">
             <Label htmlFor="stop-select">Select Stop</Label>
-            <Select value={selectedStop} onValueChange={setSelectedStop} disabled={!selectedTrip}>
+            <Select
+              value={selectedStop}
+              onValueChange={setSelectedStop}
+              disabled={!selectedTrip}
+            >
               <SelectTrigger id="stop-select" className="w-full">
-                <SelectValue placeholder={selectedTrip ? 'Choose a stop' : 'Select a trip first'} />
+                <SelectValue
+                  placeholder={
+                    selectedTrip ? "Choose a stop" : "Select a trip first"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {availableStops.map((stop) => (
@@ -414,7 +434,7 @@ function ActivityCard({ activity, onAddToTrip }: ActivityCardProps) {
       className="overflow-hidden rounded-xl bg-white shadow-warm transition-shadow hover:shadow-warm-lg"
     >
       {/* Image */}
-      <div className="relative h-[180px] w-full overflow-hidden rounded-t-xl">
+      <div className="relative h-[140px] sm:h-[180px] w-full overflow-hidden rounded-t-xl">
         <Image
           src={activity.imageUrl}
           alt={activity.name}
@@ -435,8 +455,8 @@ function ActivityCard({ activity, onAddToTrip }: ActivityCardProps) {
         <div className="flex flex-wrap items-center gap-2">
           <span
             className={cn(
-              'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
-              categoryColors[activity.category]
+              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+              categoryColors[activity.category],
             )}
           >
             {activity.category}
@@ -463,7 +483,7 @@ function ActivityCard({ activity, onAddToTrip }: ActivityCardProps) {
         <button
           onClick={() => onAddToTrip(activity)}
           className={cn(
-            'inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-ember-500/10 px-3 py-2 text-sm font-medium text-ember-600 transition-colors hover:bg-ember-500 hover:text-white'
+            "inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-ember-500/10 px-3 py-2 text-sm font-medium text-ember-600 transition-colors hover:bg-ember-500 hover:text-white",
           )}
         >
           <Plus size={16} weight="bold" />
@@ -507,17 +527,21 @@ function FilterSidebar({
 }: FilterSidebarProps) {
   const hasFilters =
     selectedCategories.size > 0 ||
-    costMin !== '' ||
-    costMax !== '' ||
-    durationMin !== '' ||
-    durationMax !== '';
+    costMin !== "" ||
+    costMax !== "" ||
+    durationMin !== "" ||
+    durationMax !== "";
 
   return (
     <aside className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="font-display text-lg font-semibold text-charcoal-800 flex items-center gap-2">
-          <SlidersHorizontal size={20} weight="duotone" className="text-ember-500" />
+          <SlidersHorizontal
+            size={20}
+            weight="duotone"
+            className="text-ember-500"
+          />
           Filters
         </h3>
         {hasFilters && (
@@ -668,7 +692,10 @@ function MobileFilterSheet({
           />
         </div>
         <DrawerFooter>
-          <Button onClick={onClose} className="bg-ember-500 hover:bg-ember-600 text-white">
+          <Button
+            onClick={onClose}
+            className="bg-ember-500 hover:bg-ember-600 text-white"
+          >
             Apply Filters
           </Button>
         </DrawerFooter>
@@ -682,14 +709,18 @@ function MobileFilterSheet({
 // ---------------------------------------------------------------------------
 
 export default function ActivitiesPage() {
-  const [search, setSearch] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<Set<ActivityCategory>>(new Set());
-  const [costMin, setCostMin] = useState('');
-  const [costMax, setCostMax] = useState('');
-  const [durationMin, setDurationMin] = useState('');
-  const [durationMax, setDurationMax] = useState('');
+  const [search, setSearch] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<
+    Set<ActivityCategory>
+  >(new Set());
+  const [costMin, setCostMin] = useState("");
+  const [costMax, setCostMax] = useState("");
+  const [durationMin, setDurationMin] = useState("");
+  const [durationMax, setDurationMax] = useState("");
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [addToTripActivity, setAddToTripActivity] = useState<Activity | null>(null);
+  const [addToTripActivity, setAddToTripActivity] = useState<Activity | null>(
+    null,
+  );
 
   const handleToggleCategory = useCallback((cat: ActivityCategory) => {
     setSelectedCategories((prev) => {
@@ -705,10 +736,10 @@ export default function ActivitiesPage() {
 
   const handleClearFilters = useCallback(() => {
     setSelectedCategories(new Set());
-    setCostMin('');
-    setCostMax('');
-    setDurationMin('');
-    setDurationMax('');
+    setCostMin("");
+    setCostMax("");
+    setDurationMin("");
+    setDurationMax("");
   }, []);
 
   // Filter activities
@@ -716,25 +747,28 @@ export default function ActivitiesPage() {
     return mockActivities.filter((activity) => {
       // Search
       const matchesSearch =
-        search === '' ||
+        search === "" ||
         activity.name.toLowerCase().includes(search.toLowerCase()) ||
         activity.city.toLowerCase().includes(search.toLowerCase()) ||
         activity.category.toLowerCase().includes(search.toLowerCase());
 
       // Category
       const matchesCategory =
-        selectedCategories.size === 0 || selectedCategories.has(activity.category);
+        selectedCategories.size === 0 ||
+        selectedCategories.has(activity.category);
 
       // Cost range
-      const costMinNum = costMin !== '' ? parseFloat(costMin) : 0;
-      const costMaxNum = costMax !== '' ? parseFloat(costMax) : Infinity;
-      const matchesCost = activity.cost >= costMinNum && activity.cost <= costMaxNum;
+      const costMinNum = costMin !== "" ? parseFloat(costMin) : 0;
+      const costMaxNum = costMax !== "" ? parseFloat(costMax) : Infinity;
+      const matchesCost =
+        activity.cost >= costMinNum && activity.cost <= costMaxNum;
 
       // Duration range
-      const durMinNum = durationMin !== '' ? parseFloat(durationMin) : 0;
-      const durMaxNum = durationMax !== '' ? parseFloat(durationMax) : Infinity;
+      const durMinNum = durationMin !== "" ? parseFloat(durationMin) : 0;
+      const durMaxNum = durationMax !== "" ? parseFloat(durationMax) : Infinity;
       const matchesDuration =
-        activity.durationHours >= durMinNum && activity.durationHours <= durMaxNum;
+        activity.durationHours >= durMinNum &&
+        activity.durationHours <= durMaxNum;
 
       return matchesSearch && matchesCategory && matchesCost && matchesDuration;
     });
@@ -742,19 +776,21 @@ export default function ActivitiesPage() {
 
   const handleAddToTripConfirm = useCallback(
     (tripId: string, stopId: string, time: string) => {
-      console.log(`Added activity to trip ${tripId}, stop ${stopId}, at ${time}`);
+      console.log(
+        `Added activity to trip ${tripId}, stop ${stopId}, at ${time}`,
+      );
     },
-    []
+    [],
   );
 
   return (
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="font-display text-3xl font-bold text-charcoal-800">
+        <h1 className="font-display text-2xl sm:text-3xl font-bold text-charcoal-800">
           Activities
         </h1>
-        <p className="mt-1 text-sm text-charcoal-500">
+        <p className="mt-1 text-xs sm:text-sm text-charcoal-500">
           Find experiences and add them to your trips
         </p>
       </div>
@@ -773,14 +809,14 @@ export default function ActivitiesPage() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search activities, cities, categories..."
             className={cn(
-              'h-11 w-full rounded-xl border border-sand-200 bg-white pl-11 pr-10 text-sm text-charcoal-800',
-              'placeholder:text-charcoal-300 focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-500/20',
-              'shadow-warm transition-all duration-200'
+              "h-11 w-full rounded-xl border border-sand-200 bg-white pl-11 pr-10 text-sm text-charcoal-800",
+              "placeholder:text-charcoal-300 focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-500/20",
+              "shadow-warm transition-all duration-200",
             )}
           />
           {search && (
             <button
-              onClick={() => setSearch('')}
+              onClick={() => setSearch("")}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-charcoal-400 hover:bg-sand-100 hover:text-charcoal-600"
               aria-label="Clear search"
             >
@@ -792,7 +828,7 @@ export default function ActivitiesPage() {
         <button
           onClick={() => setMobileFilterOpen(true)}
           className={cn(
-            'flex lg:hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sand-200 bg-white shadow-warm text-charcoal-500 hover:text-ember-500 transition-colors'
+            "flex lg:hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-sand-200 bg-white shadow-warm text-charcoal-500 hover:text-ember-500 transition-colors",
           )}
           aria-label="Open filters"
         >
@@ -834,15 +870,19 @@ export default function ActivitiesPage() {
                 No activities found
               </h3>
               <p className="mt-2 max-w-sm text-sm text-charcoal-400">
-                Try adjusting your search or filters to find what you&apos;re looking for.
+                Try adjusting your search or filters to find what you&apos;re
+                looking for.
               </p>
             </motion.div>
           ) : (
             <>
               <p className="mb-4 text-sm text-charcoal-500">
-                {filteredActivities.length} activit{filteredActivities.length === 1 ? 'y' : 'ies'} found
+                {filteredActivities.length} activit
+                {filteredActivities.length === 1 ? "y" : "ies"} found
               </p>
-              <motion.div layout className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3"
+              >
                 <AnimatePresence mode="popLayout">
                   {filteredActivities.map((activity) => (
                     <ActivityCard
@@ -878,7 +918,7 @@ export default function ActivitiesPage() {
       {/* Add to Trip drawer */}
       <AddToTripDrawer
         open={addToTripActivity !== null}
-        activityName={addToTripActivity?.name ?? ''}
+        activityName={addToTripActivity?.name ?? ""}
         onClose={() => setAddToTripActivity(null)}
         onConfirm={handleAddToTripConfirm}
       />

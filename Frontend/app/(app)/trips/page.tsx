@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useMemo, useCallback } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarBlank,
   MapPin,
@@ -13,9 +13,11 @@ import {
   Trash,
   AirplaneTilt,
   PlusCircle,
-} from '@phosphor-icons/react';
-import { cn } from '@/lib/utils';
-import { formatDateRange, formatCurrency, getTripStatus } from '@/lib/utils';
+  MagnifyingGlass,
+  X,
+} from "@phosphor-icons/react";
+import { cn } from "@/lib/utils";
+import { formatDateRange, formatCurrency } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -23,16 +25,15 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type TripStatus = 'upcoming' | 'ongoing' | 'completed';
-
-type TabFilter = 'all' | TripStatus;
+type TripStatus = "upcoming" | "ongoing" | "completed";
+type TabFilter = "all" | TripStatus;
 
 interface Trip {
   id: string;
@@ -47,167 +48,288 @@ interface Trip {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data (instant — no fetch delay)
 // ---------------------------------------------------------------------------
 
 const mockTrips: Trip[] = [
   {
-    id: '1',
-    name: 'Rajasthan Road Trip',
-    coverUrl: 'https://images.unsplash.com/photo-1524492412937-b2890037b725?w=600',
-    startDate: '2026-07-15',
-    endDate: '2026-07-28',
+    id: "1",
+    name: "Rajasthan Road Trip",
+    coverUrl:
+      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=600&q=75",
+    startDate: "2026-07-15",
+    endDate: "2026-07-28",
     cityCount: 4,
     budget: 45000,
-    currency: 'INR',
-    status: 'upcoming',
+    currency: "INR",
+    status: "upcoming",
   },
   {
-    id: '2',
-    name: 'Bali Wellness Retreat',
-    coverUrl: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=600',
-    startDate: '2026-08-10',
-    endDate: '2026-08-20',
+    id: "2",
+    name: "Bali Wellness Retreat",
+    coverUrl:
+      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=600&q=75",
+    startDate: "2026-08-10",
+    endDate: "2026-08-20",
     cityCount: 2,
     budget: 72000,
-    currency: 'INR',
-    status: 'upcoming',
+    currency: "INR",
+    status: "upcoming",
   },
   {
-    id: '3',
-    name: 'Goa Beach Escape',
-    coverUrl: 'https://images.unsplash.com/photo-1506929562872-b034d5099b21?w=600',
-    startDate: '2026-05-01',
-    endDate: '2026-05-15',
+    id: "3",
+    name: "Goa Beach Escape",
+    coverUrl:
+      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=600&q=75",
+    startDate: "2026-05-01",
+    endDate: "2026-05-15",
     cityCount: 1,
     budget: 25000,
-    currency: 'INR',
-    status: 'ongoing',
+    currency: "INR",
+    status: "ongoing",
   },
   {
-    id: '4',
-    name: 'Scandinavian Adventure',
-    coverUrl: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae598?w=600',
-    startDate: '2026-05-05',
-    endDate: '2026-05-20',
+    id: "4",
+    name: "Scandinavian Adventure",
+    coverUrl:
+      "https://images.unsplash.com/photo-1506966953602-c20cc11f75e3?auto=format&fit=crop&w=600&q=75",
+    startDate: "2026-05-05",
+    endDate: "2026-05-20",
     cityCount: 3,
     budget: 150000,
-    currency: 'INR',
-    status: 'ongoing',
+    currency: "INR",
+    status: "ongoing",
   },
   {
-    id: '5',
-    name: 'Tokyo Explorer',
-    coverUrl: 'https://images.unsplash.com/photo-1530789253388-582c4ef3842b?w=600',
-    startDate: '2026-01-10',
-    endDate: '2026-01-24',
+    id: "5",
+    name: "Tokyo Explorer",
+    coverUrl:
+      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=600&q=75",
+    startDate: "2026-01-10",
+    endDate: "2026-01-24",
     cityCount: 5,
     budget: 180000,
-    currency: 'INR',
-    status: 'completed',
+    currency: "INR",
+    status: "completed",
   },
   {
-    id: '6',
-    name: 'Kerala Backwaters',
-    coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961883?w=600',
-    startDate: '2025-12-20',
-    endDate: '2025-12-30',
+    id: "6",
+    name: "Kerala Backwaters",
+    coverUrl:
+      "https://images.unsplash.com/photo-1593693411515-c20261bcad6e?auto=format&fit=crop&w=600&q=75",
+    startDate: "2025-12-20",
+    endDate: "2025-12-30",
     cityCount: 3,
     budget: 35000,
-    currency: 'INR',
-    status: 'completed',
+    currency: "INR",
+    status: "completed",
   },
 ];
 
 // ---------------------------------------------------------------------------
-// StatusBadge component
+// Status badge
 // ---------------------------------------------------------------------------
 
-interface StatusBadgeProps {
-  status: TripStatus;
-}
-
 const statusConfig: Record<TripStatus, { label: string; className: string }> = {
-  upcoming: {
-    label: 'Upcoming',
-    className: 'bg-forest-100 text-forest-700',
-  },
-  ongoing: {
-    label: 'Ongoing',
-    className: 'bg-sand-200 text-sand-700',
-  },
+  upcoming: { label: "Upcoming", className: "bg-forest-100 text-forest-700" },
+  ongoing: { label: "Ongoing", className: "bg-sand-200 text-sand-700" },
   completed: {
-    label: 'Completed',
-    className: 'bg-charcoal-100 text-charcoal-500',
+    label: "Completed",
+    className: "bg-charcoal-100 text-charcoal-500",
   },
 };
 
-function StatusBadge({ status }: StatusBadgeProps) {
-  const config = statusConfig[status];
+function StatusBadge({ status }: { status: TripStatus }) {
+  const { label, className } = statusConfig[status];
   return (
     <span
       className={cn(
-        'inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold capitalize',
-        config.className
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        className,
       )}
     >
-      {config.label}
+      {label}
     </span>
   );
 }
 
 // ---------------------------------------------------------------------------
-// EmptyState component
+// Skeleton card — shown instantly, no layout shift
 // ---------------------------------------------------------------------------
 
-function EmptyState() {
+function TripCardSkeleton() {
+  return (
+    <div className="warm-card overflow-hidden">
+      <div className="h-[180px] w-full animate-pulse rounded-t-xl bg-sand-100" />
+      <div className="space-y-3 p-4">
+        <div className="h-5 w-3/4 animate-pulse rounded-md bg-sand-100" />
+        <div className="h-4 w-1/2 animate-pulse rounded-md bg-sand-100" />
+        <div className="h-4 w-2/5 animate-pulse rounded-md bg-sand-100" />
+        <div className="mt-3 flex gap-2 border-t border-sand-100 pt-3">
+          <div className="h-8 w-8 animate-pulse rounded-lg bg-sand-100" />
+          <div className="h-8 w-8 animate-pulse rounded-lg bg-sand-100" />
+          <div className="h-8 w-8 animate-pulse rounded-lg bg-sand-100" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Trip card — optimised: no layout prop, shorter animation, priority on first 2
+// ---------------------------------------------------------------------------
+
+interface TripCardProps {
+  trip: Trip;
+  index: number;
+  onDelete: (trip: Trip) => void;
+}
+
+function TripCard({ trip, index, onDelete }: TripCardProps) {
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const isAboveFold = index < 2; // preload first 2 cards
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center py-20 text-center"
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.2, delay: index * 0.04 }} // stagger 40ms, not 350ms each
+      className="warm-card overflow-hidden transition-shadow hover:shadow-warm-lg"
     >
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-sand-100">
-        <AirplaneTilt size={40} weight="duotone" className="text-sand-400" />
-      </div>
-      <h3 className="mt-6 font-display text-xl font-semibold text-charcoal-700">
-        No trips yet. Let&rsquo;s change that!
-      </h3>
-      <p className="mt-2 max-w-sm text-sm text-charcoal-400">
-        Start planning your next adventure and it will show up right here.
-      </p>
-      <Link
-        href="/trips/new"
-        className={cn(
-          'pill-button mt-6 inline-flex items-center gap-2 bg-ember-500 text-white hover:bg-ember-600'
+      {/* Cover photo */}
+      <div className="relative h-[180px] w-full overflow-hidden rounded-t-xl bg-sand-100">
+        {/* Skeleton shimmer underneath while image loads */}
+        {!imgLoaded && (
+          <div className="absolute inset-0 animate-pulse bg-sand-100" />
         )}
-      >
-        <PlusCircle size={20} weight="fill" />
-        Create Trip
-      </Link>
+        <Image
+          src={trip.coverUrl}
+          alt={trip.name}
+          fill
+          priority={isAboveFold} // preload visible images
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          className={cn(
+            "object-cover transition-all duration-300 hover:scale-105",
+            imgLoaded ? "opacity-100" : "opacity-0",
+          )}
+          onLoad={() => setImgLoaded(true)}
+        />
+        <div className="absolute right-2 top-2">
+          <StatusBadge status={trip.status} />
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="p-4">
+        <h3 className="font-display text-base font-semibold text-charcoal-800 line-clamp-1">
+          {trip.name}
+        </h3>
+
+        <div className="mt-2.5 space-y-1.5">
+          <div className="flex items-center gap-2 text-sm text-charcoal-600">
+            <CalendarBlank size={14} className="shrink-0 text-charcoal-400" />
+            <span className="truncate">
+              {formatDateRange(trip.startDate, trip.endDate)}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-charcoal-600">
+            <MapPin size={14} className="shrink-0 text-charcoal-400" />
+            <span>
+              {trip.cityCount} {trip.cityCount === 1 ? "city" : "cities"}
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-charcoal-600">
+            <CurrencyInr size={14} className="shrink-0 text-charcoal-400" />
+            <span>{formatCurrency(trip.budget, trip.currency)}</span>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="mt-3 flex items-center gap-0.5 border-t border-sand-100 pt-3">
+          <Link
+            href={`/trips/${trip.id}`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-forest-50 hover:text-forest-600"
+            title="View"
+          >
+            <Eye size={16} />
+          </Link>
+          <Link
+            href={`/trips/${trip.id}/edit`}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-sand-50 hover:text-sand-600"
+            title="Edit"
+          >
+            <PencilSimple size={16} />
+          </Link>
+          <button
+            onClick={() => onDelete(trip)}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-red-50 hover:text-red-500"
+            title="Delete"
+          >
+            <Trash size={16} />
+          </button>
+        </div>
+      </div>
     </motion.div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// DeleteConfirmModal
+// Empty state
 // ---------------------------------------------------------------------------
 
-interface DeleteConfirmModalProps {
+function EmptyState({ isFiltered }: { isFiltered: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
+        <AirplaneTilt size={32} weight="duotone" className="text-sand-400" />
+      </div>
+      <h3 className="mt-4 font-display text-lg font-semibold text-charcoal-700">
+        {isFiltered
+          ? "No trips match your filter"
+          : "No trips yet. Let's change that!"}
+      </h3>
+      <p className="mt-1.5 max-w-xs text-sm text-charcoal-400">
+        {isFiltered
+          ? "Try a different tab or search term."
+          : "Start planning your next adventure."}
+      </p>
+      {!isFiltered && (
+        <Link
+          href="/trips/new"
+          className="pill-button mt-5 inline-flex items-center gap-2 bg-ember-500 text-white hover:bg-ember-600"
+        >
+          <PlusCircle size={18} weight="fill" />
+          Create Trip
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Delete confirm modal
+// ---------------------------------------------------------------------------
+
+function DeleteConfirmModal({
+  open,
+  tripName,
+  onConfirm,
+  onCancel,
+}: {
   open: boolean;
   tripName: string;
   onConfirm: () => void;
   onCancel: () => void;
-}
-
-function DeleteConfirmModal({ open, tripName, onConfirm, onCancel }: DeleteConfirmModalProps) {
+}) {
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Delete Trip</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete <strong>{tripName}</strong>? This action cannot be undone.
+            Are you sure you want to delete <strong>{tripName}</strong>? This
+            cannot be undone.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-2 gap-2 sm:gap-0">
@@ -224,183 +346,170 @@ function DeleteConfirmModal({ open, tripName, onConfirm, onCancel }: DeleteConfi
 }
 
 // ---------------------------------------------------------------------------
-// TripCard
-// ---------------------------------------------------------------------------
-
-interface TripCardProps {
-  trip: Trip;
-  onDelete: (trip: Trip) => void;
-}
-
-function TripCard({ trip, onDelete }: TripCardProps) {
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.35 }}
-      className="warm-card overflow-hidden transition-shadow hover:shadow-warm-lg"
-    >
-      {/* Cover photo */}
-      <div className="relative h-[200px] w-full overflow-hidden rounded-t-xl">
-        <Image
-          src={trip.coverUrl}
-          alt={trip.name}
-          fill
-          className="object-cover transition-transform duration-500 hover:scale-105"
-          sizes="(max-width: 768px) 100vw, 50vw"
-        />
-        <div className="absolute right-3 top-3">
-          <StatusBadge status={trip.status} />
-        </div>
-      </div>
-
-      {/* Card body */}
-      <div className="p-4">
-        <h3 className="font-display text-lg font-semibold text-charcoal-800">
-          {trip.name}
-        </h3>
-
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <CalendarBlank size={16} className="shrink-0 text-charcoal-400" />
-            <span>{formatDateRange(trip.startDate, trip.endDate)}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <MapPin size={16} className="shrink-0 text-charcoal-400" />
-            <span>
-              {trip.cityCount} {trip.cityCount === 1 ? 'city' : 'cities'}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <CurrencyInr size={16} className="shrink-0 text-charcoal-400" />
-            <span>{formatCurrency(trip.budget, trip.currency)}</span>
-          </div>
-        </div>
-
-        {/* Actions row */}
-        <div className="mt-4 flex items-center gap-1 border-t border-sand-100 pt-3">
-          <Link
-            href={`/trips/${trip.id}`}
-            className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-forest-50 hover:text-forest-600'
-            )}
-            title="View"
-          >
-            <Eye size={18} />
-          </Link>
-          <Link
-            href={`/trips/${trip.id}/edit`}
-            className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-sand-50 hover:text-sand-600'
-            )}
-            title="Edit"
-          >
-            <PencilSimple size={18} />
-          </Link>
-          <button
-            onClick={() => onDelete(trip)}
-            className={cn(
-              'inline-flex h-9 w-9 items-center justify-center rounded-lg text-charcoal-400 transition-colors hover:bg-red-50 hover:text-red-500'
-            )}
-            title="Delete"
-          >
-            <Trash size={18} />
-          </button>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// MyTripsPage
+// Tabs config
 // ---------------------------------------------------------------------------
 
 const tabs: { key: TabFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'ongoing', label: 'Ongoing' },
-  { key: 'completed', label: 'Completed' },
+  { key: "all", label: "All" },
+  { key: "upcoming", label: "Upcoming" },
+  { key: "ongoing", label: "Ongoing" },
+  { key: "completed", label: "Completed" },
 ];
 
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function MyTripsPage() {
-  const [activeTab, setActiveTab] = useState<TabFilter>('all');
+  const [activeTab, setActiveTab] = useState<TabFilter>("all");
+  const [search, setSearch] = useState("");
   const [trips, setTrips] = useState<Trip[]>(mockTrips);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
 
-  const filteredTrips =
-    activeTab === 'all' ? trips : trips.filter((t) => t.status === activeTab);
+  // Derived — memoised so tab/search don't re-create the array on every keystroke
+  const filteredTrips = useMemo(() => {
+    let list =
+      activeTab === "all" ? trips : trips.filter((t) => t.status === activeTab);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((t) => t.name.toLowerCase().includes(q));
+    }
+    return list;
+  }, [trips, activeTab, search]);
 
-  function handleDeleteConfirm() {
+  const handleDeleteConfirm = useCallback(() => {
     if (!deleteTarget) return;
     setTrips((prev) => prev.filter((t) => t.id !== deleteTarget.id));
     setDeleteTarget(null);
-  }
+  }, [deleteTarget]);
+
+  const handleTabChange = useCallback((key: TabFilter) => {
+    setActiveTab(key);
+    setSearch(""); // clear search on tab switch
+  }, []);
 
   return (
-    <div className="space-y-6">
-      {/* Page header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-5">
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold text-charcoal-800">
+          <h1 className="font-display text-2xl font-bold text-charcoal-800 sm:text-3xl">
             My Trips
           </h1>
-          <p className="mt-1 text-sm text-charcoal-500">
-            Manage and explore all your planned adventures
+          <p className="mt-0.5 text-sm text-charcoal-500">
+            {trips.length} {trips.length === 1 ? "trip" : "trips"} planned
           </p>
         </div>
         <Link
           href="/trips/new"
-          className={cn(
-            'pill-button inline-flex items-center gap-2 bg-ember-500 text-white hover:bg-ember-600'
-          )}
+          className="pill-button inline-flex items-center gap-2 bg-ember-500 text-white hover:bg-ember-600 self-start sm:self-auto"
         >
-          <PlusCircle size={20} weight="fill" />
-          Create Trip
+          <PlusCircle size={18} weight="fill" />
+          New Trip
         </Link>
       </div>
 
-      {/* Tab bar */}
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((tab) => (
-          <button
-            key={tab.key}
-            onClick={() => setActiveTab(tab.key)}
-            className={cn(
-              'pill-button text-sm transition-all duration-200',
-              activeTab === tab.key
-                ? 'bg-ember-500 text-white shadow-sm'
-                : 'bg-sand-100 text-charcoal-600 hover:bg-sand-200'
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* ── Search + Tabs row ───────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+        {/* Search */}
+        <div className="relative flex-1 sm:max-w-xs">
+          <MagnifyingGlass
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400"
+          />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search trips…"
+            className="h-9 w-full rounded-lg border border-sand-200 bg-white pl-9 pr-8 text-sm text-charcoal-800 placeholder:text-charcoal-300 focus:border-ember-400 focus:outline-none focus:ring-2 focus:ring-ember-100 transition-colors"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-charcoal-400 hover:text-charcoal-600"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {/* Status tabs */}
+        <div className="flex gap-1.5 flex-wrap">
+          {tabs.map((tab) => {
+            const count =
+              tab.key === "all"
+                ? trips.length
+                : trips.filter((t) => t.status === tab.key).length;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={cn(
+                  "relative rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150",
+                  activeTab === tab.key
+                    ? "bg-ember-500 text-white shadow-sm"
+                    : "bg-sand-100 text-charcoal-600 hover:bg-sand-200",
+                )}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span
+                    className={cn(
+                      "ml-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold",
+                      activeTab === tab.key
+                        ? "bg-white/25 text-white"
+                        : "bg-sand-200 text-charcoal-500",
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Trip grid */}
-      {filteredTrips.length === 0 ? (
-        <EmptyState />
-      ) : (
-        <motion.div layout className="grid gap-5 sm:grid-cols-2">
-          <AnimatePresence mode="popLayout">
-            {filteredTrips.map((trip) => (
-              <TripCard
-                key={trip.id}
-                trip={trip}
-                onDelete={(t) => setDeleteTarget(t)}
-              />
-            ))}
-          </AnimatePresence>
-        </motion.div>
-      )}
+      {/* ── Grid ───────────────────────────────────────────────────────── */}
+      <AnimatePresence mode="popLayout" initial={false}>
+        {filteredTrips.length === 0 ? (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <EmptyState isFiltered={activeTab !== "all" || !!search} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="grid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              {filteredTrips.map((trip, i) => (
+                <TripCard
+                  key={trip.id}
+                  trip={trip}
+                  index={i}
+                  onDelete={setDeleteTarget}
+                />
+              ))}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Delete confirmation modal */}
+      {/* ── Delete modal ───────────────────────────────────────────────── */}
       <DeleteConfirmModal
         open={deleteTarget !== null}
-        tripName={deleteTarget?.name ?? ''}
+        tripName={deleteTarget?.name ?? ""}
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
       />

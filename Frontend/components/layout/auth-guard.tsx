@@ -1,9 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/auth';
-import { FullPageLoader } from '@/components/ui/loader';
+import { useEffect, useLayoutEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/auth";
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -11,24 +10,32 @@ interface AuthGuardProps {
 
 export function AuthGuard({ children }: AuthGuardProps) {
   const router = useRouter();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const isLoading = useAuthStore((s) => s.isLoading);
   const hydrate = useAuthStore((s) => s.hydrate);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  useEffect(() => {
+  // useLayoutEffect fires before the browser paints (client-side only),
+  // so isLoading → false happens before any render is visible.
+  // This prevents hydration mismatches: server renders null (isLoading:true),
+  // client also renders null initially, then useLayoutEffect updates state
+  // pre-paint, invisible to the user.
+  useLayoutEffect(() => {
     hydrate();
   }, [hydrate]);
 
+  // Redirect unauthenticated users after auth state is known
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.replace("/login");
     }
   }, [isLoading, isAuthenticated, router]);
 
+  // While isLoading — render nothing (same on server + client → no mismatch)
   if (isLoading) {
-    return <FullPageLoader />;
+    return null;
   }
 
+  // Auth resolved: not logged in — redirect is in-flight, show nothing
   if (!isAuthenticated) {
     return null;
   }

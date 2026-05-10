@@ -37,14 +37,14 @@ function MobileTopBar() {
 export function AppLayout({ children }: AppLayoutProps) {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-cream">
+      <div className="min-h-screen bg-cream flex flex-col">
         <Sidebar />
 
         {/* Main content area */}
-        <div className="md:ml-[240px]">
+        <div className="flex-1 md:ml-[240px] overflow-x-hidden">
           <MobileTopBar />
 
-          <main className="p-4 md:p-6 lg:p-8">
+          <main className="p-3 sm:p-4 md:p-6 lg:p-8 min-h-[calc(100vh-80px)] md:min-h-screen">
             <PageWrapper>{children}</PageWrapper>
           </main>
         </div>
