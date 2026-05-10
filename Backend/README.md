@@ -10,16 +10,56 @@ Express.js + TypeScript REST API powering the Traveloop travel planning applicat
 - **Validation**: Zod
 - **CORS**: Configured for Next.js frontend on `http://localhost:3000`
 
+## Environment Setup (.env)
+
+**⚠️ REQUIRED: Create a `.env` file before running the backend**
+
+### PostgreSQL Connection Configuration
+
+Create a `.env` file in the `Backend/` directory with the following:
+
+```env
+# PostgreSQL Database Connection (REQUIRED)
+DATABASE_URL=postgresql://username:password@localhost:5432/travelloop
+
+# JWT Secret for Authentication (REQUIRED)
+JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
+
+# Environment
+NODE_ENV=development
+```
+
+### Examples for Different PostgreSQL Providers
+
+#### Local PostgreSQL
+```env
+DATABASE_URL=postgresql://postgres:password@localhost:5432/traveloop
+```
+
+#### Neon (Serverless PostgreSQL)
+```env
+DATABASE_URL=postgresql://user:password@ep-cool-shape-123.us-east-1.neon.tech/travelloop?sslmode=require
+```
+
+#### Railway or Similar
+```env
+DATABASE_URL=postgresql://user:password@railway.app:5432/railway
+```
+
+#### Supabase
+```env
+DATABASE_URL=postgresql://postgres.user:password@db.supabase.co:5432/postgres
+```
+
 ## Quick Start
 
 ```bash
 # 1. Install dependencies
 npm install
 
-# 2. Set up environment (already configured)
-# .env has DB credentials + JWT secret
+# 2. Create .env file with DATABASE_URL and JWT_SECRET (see above)
 
-# 3. Run migrations (adds missing columns to existing DB)
+# 3. Run migrations (creates tables in your PostgreSQL database)
 npm run db:migrate
 
 # 4. Seed database with cities, categories, activities
