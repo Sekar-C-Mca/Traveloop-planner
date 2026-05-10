@@ -75,6 +75,10 @@ TravelLoop is a full-stack travel planning application that helps users organize
    npm run db:migrate
    npm run db:seed
    npm run dev
+
+   Or
+
+   Setup.sh then Run.sh
    ```
    API runs on `http://localhost:5000`
 
