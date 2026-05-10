@@ -5,31 +5,51 @@ import { createError } from '../middleware/errorHandler';
 export const getCities = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const { search, region, sort, featured, limit = '20', offset = '0' } = req.query as Record<string, string>;
-    const params: unknown[] = [search || null, region || null, featured === 'true' ? true : null];
+    
+    // Build dynamic conditions to allow indexes to be used effectively
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (search) {
+      params.push(search);
+      conditions.push(`(c.name ILIKE '%' || $${params.length} || '%' OR c.country ILIKE '%' || $${params.length} || '%' OR c.state ILIKE '%' || $${params.length} || '%')`);
+    }
+
+    if (region) {
+      params.push(region);
+      conditions.push(`c.region = $${params.length}`);
+    }
+
+    if (featured === 'true') {
+      conditions.push(`c.is_featured = true`);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     let orderClause = 'ORDER BY c.is_featured DESC, c.popularity_score DESC NULLS LAST';
     if (sort === 'cost_asc') orderClause = 'ORDER BY c.cost_index ASC NULLS LAST';
     else if (sort === 'cost_desc') orderClause = 'ORDER BY c.cost_index DESC NULLS LAST';
     else if (sort === 'popularity') orderClause = 'ORDER BY c.is_featured DESC, c.popularity_score DESC NULLS LAST';
 
+    // Get total count (using a subquery or separate call)
+    // If no search/filter, we could potentially cache this or use an estimate for 150k+ rows
     const countResult = await query(
-      `SELECT COUNT(*)::int as total FROM cities c
-       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%' OR c.state ILIKE '%' || $1 || '%')
-       AND ($2::text IS NULL OR c.region = $2)
-       AND ($3::boolean IS NULL OR c.is_featured = $3)`,
+      `SELECT COUNT(*)::int as total FROM cities c ${whereClause}`,
       params
     );
 
-    params.push(parseInt(limit), parseInt(offset));
+    const limitVal = parseInt(limit);
+    const offsetVal = parseInt(offset);
+    params.push(limitVal, offsetVal);
+    
     const result = await query(
       `SELECT * FROM cities c
-       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%' OR c.state ILIKE '%' || $1 || '%')
-       AND ($2::text IS NULL OR c.region = $2)
-       AND ($3::boolean IS NULL OR c.is_featured = $3)
+       ${whereClause}
        ${orderClause}
-       LIMIT $4 OFFSET $5`,
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
       params
     );
+    
     res.json({ cities: result.rows, total: countResult.rows[0].total });
   } catch (err) { next(err); }
 };

@@ -14,15 +14,15 @@ export const getTrips = async (req: AuthRequest, res: Response, next: NextFuncti
       params.push(status);
       statusClause = `AND t.status = $${params.length}`;
     }
+    
+    // Optimized with subqueries to avoid row multiplication and heavy GROUP BY
     const result = await query(
       `SELECT t.*,
-        COUNT(DISTINCT ts.id)::int as stop_count,
-        COALESCE(tb.transport_budget + tb.stay_budget + tb.activity_budget + tb.meal_budget + tb.misc_budget, 0) as total_estimated
+        (SELECT COUNT(*)::int FROM trip_stops ts WHERE ts.trip_id = t.id) as stop_count,
+        COALESCE((SELECT transport_budget + stay_budget + activity_budget + meal_budget + misc_budget 
+                  FROM trip_budgets tb WHERE tb.trip_id = t.id), 0) as total_estimated
        FROM trips t
-       LEFT JOIN trip_stops ts ON ts.trip_id = t.id
-       LEFT JOIN trip_budgets tb ON tb.trip_id = t.id
        WHERE t.user_id = $1 AND t.is_deleted = false ${statusClause}
-       GROUP BY t.id, tb.transport_budget, tb.stay_budget, tb.activity_budget, tb.meal_budget, tb.misc_budget
        ORDER BY t.start_date ASC`,
       params
     );

@@ -386,8 +386,11 @@ interface TripData {
   name: string;
   start_date: string;
   end_date: string;
+  total_budget?: number | string | null;
+  currency?: string;
   stops: any[];
 }
+
 
 export default function ViewItineraryPage() {
   const params = useParams();
@@ -418,21 +421,22 @@ export default function ViewItineraryPage() {
           setTripData(trip);
           
           // Transform backend stops to frontend format
+          // NOTE: Neon HTTP API returns numeric cols as strings — always coerce with Number()
           const transformedStops: Stop[] = (trip.stops || []).map((s: any) => ({
             id: String(s.id),
-            city: s.city.name,
-            country: s.city.country,
+            city: s.city?.name ?? 'Unknown',
+            country: s.city?.country ?? '',
             arrivalDate: s.arrival_date,
             departureDate: s.departure_date,
-            stayCost: s.stay_cost || 0,
-            transportCost: s.transport_cost || 0,
+            stayCost: Number(s.stay_cost) || 0,
+            transportCost: Number(s.transport_cost) || 0,
             activities: (s.activities || []).map((a: any) => ({
               id: String(a.id),
-              name: a.activity.name,
-              category: (a.activity.category_name ?? 'sightseeing').toLowerCase(),
+              name: a.activity?.name ?? 'Activity',
+              category: (a.activity?.category_name ?? 'sightseeing').toLowerCase(),
               scheduledTime: a.scheduled_time || '09:00',
               scheduledDate: a.scheduled_date,
-              cost: a.custom_cost ?? a.activity.estimated_cost ?? 0,
+              cost: Number(a.custom_cost ?? a.activity?.estimated_cost ?? 0) || 0,
             })),
           }));
           
@@ -467,7 +471,14 @@ export default function ViewItineraryPage() {
 
   const totalDays = useMemo(() => computeTripDays(stops), [stops]);
   const totalCities = stops.length;
-  const totalCost = useMemo(() => computeTotalCost(stops), [stops]);
+  const totalCost = useMemo(() => {
+    const computed = computeTotalCost(stops);
+    // Fall back to trip.total_budget if no stop-level costs are set
+    if (computed === 0 && tripData?.total_budget) {
+      return Number(tripData.total_budget) || 0;
+    }
+    return computed;
+  }, [stops, tripData]);
 
   async function handleShare() {
     const publicUrl = `${window.location.origin}/share/${tripId}`;
