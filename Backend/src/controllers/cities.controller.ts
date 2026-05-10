@@ -4,28 +4,30 @@ import { createError } from '../middleware/errorHandler';
 
 export const getCities = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { search, region, sort, limit = '20', offset = '0' } = req.query as Record<string, string>;
-    const params: unknown[] = [search || null, region || null];
+    const { search, region, sort, featured, limit = '20', offset = '0' } = req.query as Record<string, string>;
+    const params: unknown[] = [search || null, region || null, featured === 'true' ? true : null];
 
-    let orderClause = 'ORDER BY c.popularity_score DESC NULLS LAST';
+    let orderClause = 'ORDER BY c.is_featured DESC, c.popularity_score DESC NULLS LAST';
     if (sort === 'cost_asc') orderClause = 'ORDER BY c.cost_index ASC NULLS LAST';
     else if (sort === 'cost_desc') orderClause = 'ORDER BY c.cost_index DESC NULLS LAST';
-    else if (sort === 'popularity') orderClause = 'ORDER BY c.popularity_score DESC NULLS LAST';
+    else if (sort === 'popularity') orderClause = 'ORDER BY c.is_featured DESC, c.popularity_score DESC NULLS LAST';
 
     const countResult = await query(
       `SELECT COUNT(*)::int as total FROM cities c
-       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%')
-       AND ($2::text IS NULL OR c.region = $2)`,
+       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%' OR c.state ILIKE '%' || $1 || '%')
+       AND ($2::text IS NULL OR c.region = $2)
+       AND ($3::boolean IS NULL OR c.is_featured = $3)`,
       params
     );
 
     params.push(parseInt(limit), parseInt(offset));
     const result = await query(
       `SELECT * FROM cities c
-       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%')
+       WHERE ($1::text IS NULL OR c.name ILIKE '%' || $1 || '%' OR c.country ILIKE '%' || $1 || '%' OR c.state ILIKE '%' || $1 || '%')
        AND ($2::text IS NULL OR c.region = $2)
+       AND ($3::boolean IS NULL OR c.is_featured = $3)
        ${orderClause}
-       LIMIT $3 OFFSET $4`,
+       LIMIT $4 OFFSET $5`,
       params
     );
     res.json({ cities: result.rows, total: countResult.rows[0].total });

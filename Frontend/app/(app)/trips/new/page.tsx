@@ -39,6 +39,7 @@ interface AddedCity {
   id: string;
   name: string;
   country: string;
+  state?: string;
   arrivalDate: string;
   departureDate: string;
 }
@@ -340,24 +341,32 @@ function StepAddCities({
   const [search, setSearch] = useState('');
   const [showResults, setShowResults] = useState(false);
   const [allCities, setAllCities] = useState<CityResult[]>([]);
-  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
 
-  // Fetch cities from backend on mount
+  // Server-side search with debounce
   useEffect(() => {
     let cancelled = false;
-
-    async function loadCities() {
+    const timer = setTimeout(async () => {
       try {
         setCitiesLoading(true);
         setCitiesError(null);
-        const { data } = await api.get('/api/cities?limit=100');
+        
+        // Search cities with limit and optional query
+        const { data } = await api.get(`/api/cities`, {
+          params: {
+            search: search.trim() || undefined,
+            limit: 20
+          }
+        });
+
         if (!cancelled && data?.cities) {
           setAllCities(
             data.cities.map((c: any) => ({
               id: String(c.id),
               name: c.name,
               country: c.country,
+              state: c.state,
             }))
           );
         }
@@ -372,28 +381,15 @@ function StepAddCities({
           setCitiesLoading(false);
         }
       }
-    }
-
-    loadCities();
+    }, 400); // 400ms debounce
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
-  }, []);
+  }, [search]);
 
-  const results = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (q.length === 0) {
-      return allCities;
-    }
-
-    return allCities.filter(
-      (c) =>
-        c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
-    );
-  }, [search, allCities]);
-
-  const filteredCities = results;
+  const filteredCities = allCities;
 
   return (
     <motion.div
@@ -505,7 +501,9 @@ function StepAddCities({
                     <MapPin size={16} className="shrink-0 text-ember-500" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-charcoal-800">{city.name}</p>
-                      <p className="text-xs text-charcoal-400">{city.country}</p>
+                      <p className="text-xs text-charcoal-400">
+                        {city.state ? `${city.state}, ` : ""}{city.country}
+                      </p>
                     </div>
                     {alreadyAdded && (
                       <span className="text-xs text-charcoal-400">Added</span>
@@ -542,7 +540,9 @@ function StepAddCities({
                       <span className="text-sm font-semibold text-charcoal-800">
                         {city.name}
                       </span>
-                      <span className="text-xs text-charcoal-400">{city.country}</span>
+                      <span className="text-xs text-charcoal-400">
+                        {city.state ? `${city.state}, ` : ""}{city.country}
+                      </span>
                     </div>
                     <button
                       onClick={() => onRemoveCity(city.id)}
@@ -684,7 +684,7 @@ function StepReview({
                   className="inline-flex items-center gap-1 rounded-full bg-sand-100 px-3 py-1 text-xs font-medium text-charcoal-700"
                 >
                   <MapPin size={12} className="text-ember-500" />
-                  {city.name}
+                  {city.name}{city.state ? `, ${city.state}` : ""}
                 </span>
               ))}
             </div>
@@ -799,6 +799,7 @@ export default function CreateTripPage() {
         id: city.id,
         name: city.name,
         country: city.country,
+        state: city.state,
         arrivalDate: '',
         departureDate: '',
       },

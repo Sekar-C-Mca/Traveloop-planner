@@ -161,11 +161,19 @@ function CityCard({ city, isSaved, onToggleSave, onAddToTrip }: CityCardProps) {
       />
       <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/90 via-charcoal-900/40 to-transparent" />
 
+      {/* Featured Badge */}
+      {city.is_featured && (
+        <div className="absolute left-3 top-3 z-10 rounded-full bg-ember-500 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg">
+          Featured
+        </div>
+      )}
+
       {/* Bookmark */}
       <button
         onClick={(e) => { e.stopPropagation(); onToggleSave(city); }}
         className={cn(
-          "absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm transition-colors",
+          "absolute z-10 flex h-9 w-9 items-center justify-center rounded-full backdrop-blur-sm transition-colors",
+          city.is_featured ? "right-3 top-3" : "left-3 top-3",
           isSaved ? "bg-ember-500 text-white" : "bg-charcoal-900/40 text-white hover:bg-charcoal-900/60"
         )}
         aria-label={isSaved ? "Unsave city" : "Save city"}
@@ -174,15 +182,17 @@ function CityCard({ city, isSaved, onToggleSave, onAddToTrip }: CityCardProps) {
       </button>
 
       {/* Cost badge */}
-      <div className="absolute right-3 top-3 z-10 rounded-full bg-charcoal-900/60 px-2.5 py-1 text-xs font-semibold text-sand-100 backdrop-blur-sm">
-        {costIndexLabel(Number(city.cost_index))}
-      </div>
+      {!city.is_featured && (
+        <div className="absolute right-3 top-3 z-10 rounded-full bg-charcoal-900/60 px-2.5 py-1 text-xs font-semibold text-sand-100 backdrop-blur-sm">
+          {costIndexLabel(Number(city.cost_index))}
+        </div>
+      )}
 
       {/* Info */}
       <div className="absolute inset-x-0 bottom-0 p-4">
         <h3 className="font-display text-xl font-semibold text-white drop-shadow-md">{city.name}</h3>
-        <div className="mt-1 flex items-center gap-1.5 text-sm text-sand-200">
-          <span>{city.country}</span>
+        <div className="mt-0.5 flex flex-wrap items-center gap-1 text-xs sm:text-sm text-sand-200">
+          <span className="font-medium">{city.state && `${city.state}, `}{city.country}</span>
           {city.region && <span className="text-sand-400">· {city.region}</span>}
         </div>
         <div className="mt-2 flex items-center gap-0.5">

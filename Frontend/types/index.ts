@@ -12,11 +12,14 @@ export interface City {
   id: number;
   name: string;
   country: string;
+  state?: string;
+  country_code?: string;
   region?: string;
   cost_index?: number;
   popularity_score: number;
   description?: string;
   image_url?: string;
+  is_featured?: boolean;
 }
 
 export interface Trip {
