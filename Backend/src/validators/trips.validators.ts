@@ -24,8 +24,8 @@ export const updateTripSchema = z.object({
 
 export const createStopSchema = z.object({
   city_id: z.number().int().positive(),
-  arrival_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  departure_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  arrival_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  departure_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   stay_cost: z.number().min(0).default(0),
   transport_cost: z.number().min(0).default(0),
   notes: z.string().optional().nullable(),

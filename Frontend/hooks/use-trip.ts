@@ -21,8 +21,8 @@ export function useTrip() {
   const fetchTrips = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get<Trip[]>('/api/trips');
-      setTrips(data);
+      const { data } = await api.get<{ trips: Trip[] }>('/api/trips');
+      setTrips(data.trips);
     } catch (error) {
       throw error;
     } finally {
@@ -34,8 +34,8 @@ export function useTrip() {
     async (id: string) => {
       setLoading(true);
       try {
-        const { data } = await api.get<Trip>(`/api/trips/${id}`);
-        setActiveTrip(data);
+        const { data } = await api.get<{ trip: Trip }>(`/api/trips/${id}`);
+        setActiveTrip(data.trip);
       } catch (error) {
         throw error;
       } finally {
@@ -49,9 +49,9 @@ export function useTrip() {
     async (tripData: Partial<Trip>) => {
       setLoading(true);
       try {
-        const { data } = await api.post<Trip>('/api/trips', tripData);
-        addTrip(data);
-        return data;
+        const { data } = await api.post<{ trip: Trip }>('/api/trips', tripData);
+        addTrip(data.trip);
+        return data.trip;
       } catch (error) {
         throw error;
       } finally {
@@ -65,9 +65,9 @@ export function useTrip() {
     async (id: string, tripData: Partial<Trip>) => {
       setLoading(true);
       try {
-        const { data } = await api.put<Trip>(`/api/trips/${id}`, tripData);
-        updateTripInStore(id, data);
-        return data;
+        const { data } = await api.put<{ trip: Trip }>(`/api/trips/${id}`, tripData);
+        updateTripInStore(id, data.trip);
+        return data.trip;
       } catch (error) {
         throw error;
       } finally {

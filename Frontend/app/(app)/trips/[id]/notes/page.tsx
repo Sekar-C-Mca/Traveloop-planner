@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PencilSimple,
@@ -8,9 +9,10 @@ import {
   MapPin,
   BookOpen,
   X,
-  Check,
+  SpinnerGap,
 } from '@phosphor-icons/react';
-import { cn, formatRelativeTime, generateId } from '@/lib/utils';
+import { cn, formatRelativeTime } from '@/lib/utils';
+import api from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,69 +21,16 @@ import { cn, formatRelativeTime, generateId } from '@/lib/utils';
 interface Note {
   id: string;
   content: string;
-  city?: string;
-  createdAt: string;
+  city_name?: string;       // joined from backend
+  trip_stop_id?: string | null;
+  created_at: string;
 }
 
 interface StopOption {
   id: string;
-  city: string;
+  city_name: string;
   country: string;
 }
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const INITIAL_NOTES: Note[] = [
-  {
-    id: 'n1',
-    content:
-      'Watched the most incredible sunset from the Charles Bridge today. The light hit the castle and turned everything gold. Need to come back here in autumn.',
-    city: 'Prague',
-    createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n2',
-    content:
-      'Found the best trdelnik stand near the Old Town Square. The lady there told me they roll the dough around wooden sticks and roast it over coals. Tastes like cinnamon heaven.',
-    city: 'Prague',
-    createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n3',
-    content:
-      'The train ride between Prague and Vienna was stunning. Rolling green hills and little villages with terracotta roofs. Three hours flew by.',
-    city: 'Vienna',
-    createdAt: new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n4',
-    content:
-      'Visited the Schonbrunn Palace gardens. The hedges are trimmed so precisely they look like green architecture. Sat by the Gloriette and ate a sachertorte.',
-    city: 'Vienna',
-    createdAt: new Date(Date.now() - 30 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n5',
-    content:
-      'Budapest at night is something else entirely. The Parliament building lit up reflects perfectly in the Danube. Walked across the Chain Bridge around midnight.',
-    city: 'Budapest',
-    createdAt: new Date(Date.now() - 74 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: 'n6',
-    content:
-      'General travel tip: always carry a reusable water bottle. The tap water in all three cities was perfectly safe and saved me a fortune.',
-    createdAt: new Date(Date.now() - 100 * 60 * 60 * 1000).toISOString(),
-  },
-];
-
-const STOP_OPTIONS: StopOption[] = [
-  { id: 's1', city: 'Prague', country: 'Czech Republic' },
-  { id: 's2', city: 'Vienna', country: 'Austria' },
-  { id: 's3', city: 'Budapest', country: 'Hungary' },
-];
 
 // ---------------------------------------------------------------------------
 // Note Card
@@ -106,7 +55,7 @@ function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
       {/* Top row: timestamp + actions */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-charcoal-400 font-body">
-          {formatRelativeTime(note.createdAt)}
+          {formatRelativeTime(note.created_at)}
         </span>
         <div className="flex items-center gap-1">
           <button
@@ -127,10 +76,10 @@ function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
       </div>
 
       {/* City badge */}
-      {note.city && (
+      {note.city_name && (
         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-sand-100 text-sand-700 text-xs font-medium mb-2">
           <MapPin size={12} weight="fill" />
-          {note.city}
+          {note.city_name}
         </span>
       )}
 
@@ -149,33 +98,38 @@ function NoteCard({ note, onEdit, onDelete }: NoteCardProps) {
 interface NoteModalProps {
   isOpen: boolean;
   editingNote: Note | null;
+  stopOptions: StopOption[];
   onClose: () => void;
-  onSave: (content: string, city: string | undefined) => void;
+  onSave: (content: string, trip_stop_id: string | null) => Promise<void>;
 }
 
-function NoteModal({ isOpen, editingNote, onClose, onSave }: NoteModalProps) {
+function NoteModal({ isOpen, editingNote, stopOptions, onClose, onSave }: NoteModalProps) {
   const [content, setContent] = useState('');
-  const [selectedCity, setSelectedCity] = useState<string>('none');
+  const [selectedStop, setSelectedStop] = useState<string>('none');
+  const [saving, setSaving] = useState(false);
 
-  // Reset form when modal opens
   React.useEffect(() => {
     if (isOpen) {
       if (editingNote) {
         setContent(editingNote.content);
-        setSelectedCity(editingNote.city || 'none');
+        setSelectedStop(editingNote.trip_stop_id ?? 'none');
       } else {
         setContent('');
-        setSelectedCity('none');
+        setSelectedStop('none');
       }
     }
   }, [isOpen, editingNote]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!content.trim()) return;
-    const city = selectedCity === 'none' ? undefined : selectedCity;
-    onSave(content.trim(), city);
-    onClose();
-  }, [content, selectedCity, onSave, onClose]);
+    setSaving(true);
+    try {
+      await onSave(content.trim(), selectedStop === 'none' ? null : selectedStop);
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  }, [content, selectedStop, onSave, onClose]);
 
   if (!isOpen) return null;
 
@@ -219,23 +173,25 @@ function NoteModal({ isOpen, editingNote, onClose, onSave }: NoteModalProps) {
             </div>
 
             {/* City/stop selector */}
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-charcoal-600 mb-1.5">
-                Link to stop
-              </label>
-              <select
-                value={selectedCity}
-                onChange={(e) => setSelectedCity(e.target.value)}
-                className="w-full rounded-lg border border-sand-200 bg-sand-50 px-3 py-2.5 text-sm text-charcoal-700 focus:border-ember-500 focus:outline-none focus:ring-1 focus:ring-ember-500 transition-colors"
-              >
-                <option value="none">No specific stop</option>
-                {STOP_OPTIONS.map((stop) => (
-                  <option key={stop.id} value={stop.city}>
-                    {stop.city}, {stop.country}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {stopOptions.length > 0 && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-charcoal-600 mb-1.5">
+                  Link to stop
+                </label>
+                <select
+                  value={selectedStop}
+                  onChange={(e) => setSelectedStop(e.target.value)}
+                  className="w-full rounded-lg border border-sand-200 bg-sand-50 px-3 py-2.5 text-sm text-charcoal-700 focus:border-ember-500 focus:outline-none focus:ring-1 focus:ring-ember-500 transition-colors"
+                >
+                  <option value="none">No specific stop</option>
+                  {stopOptions.map((stop) => (
+                    <option key={stop.id} value={stop.id}>
+                      {stop.city_name}, {stop.country}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
             {/* Textarea */}
             <div className="mb-6">
@@ -254,14 +210,15 @@ function NoteModal({ isOpen, editingNote, onClose, onSave }: NoteModalProps) {
             {/* Save button */}
             <button
               onClick={handleSave}
-              disabled={!content.trim()}
+              disabled={!content.trim() || saving}
               className={cn(
-                'w-full py-3 rounded-full font-medium text-sm transition-all duration-200',
-                content.trim()
+                'w-full py-3 rounded-full font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2',
+                content.trim() && !saving
                   ? 'bg-ember-500 text-white hover:bg-ember-600 shadow-warm'
                   : 'bg-charcoal-100 text-charcoal-300 cursor-not-allowed'
               )}
             >
+              {saving && <SpinnerGap size={16} className="animate-spin" />}
               {editingNote ? 'Save Changes' : 'Save Note'}
             </button>
           </motion.div>
@@ -301,39 +258,99 @@ function EmptyState() {
 // ---------------------------------------------------------------------------
 
 export default function TripNotesPage() {
-  const [notes, setNotes] = useState<Note[]>(INITIAL_NOTES);
+  const params = useParams();
+  const tripId = params.id as string;
+
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [stopOptions, setStopOptions] = useState<StopOption[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
 
+  // Load notes + stops
+  useEffect(() => {
+    if (!tripId) return;
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        const [notesRes, stopsRes] = await Promise.all([
+          api.get(`/api/trips/${tripId}/notes`),
+          api.get(`/api/trips/${tripId}/stops`),
+        ]);
+        if (!cancelled) {
+          setNotes(notesRes.data.notes ?? []);
+          setStopOptions(
+            (stopsRes.data.stops ?? []).map((s: any) => ({
+              id: String(s.id),
+              city_name: s.city_name,
+              country: s.country,
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) setNotes([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => { cancelled = true; };
+  }, [tripId]);
+
+  // Add note
   const handleAddNote = useCallback(
-    (content: string, city: string | undefined) => {
-      const newNote: Note = {
-        id: generateId(),
+    async (content: string, trip_stop_id: string | null) => {
+      const { data } = await api.post(`/api/trips/${tripId}/notes`, {
         content,
-        city,
-        createdAt: new Date().toISOString(),
-      };
-      setNotes((prev) => [newNote, ...prev]);
+        trip_stop_id: trip_stop_id ?? null,
+      });
+      const newNote = data.note;
+      // Attach city_name from stops
+      const stop = stopOptions.find((s) => s.id === String(newNote.trip_stop_id));
+      setNotes((prev) => [{ ...newNote, city_name: stop?.city_name }, ...prev]);
     },
-    []
+    [tripId, stopOptions]
   );
 
+  // Edit note
   const handleEditNote = useCallback(
-    (content: string, city: string | undefined) => {
+    async (content: string, trip_stop_id: string | null) => {
       if (!editingNote) return;
+      const { data } = await api.put(
+        `/api/trips/${tripId}/notes/${editingNote.id}`,
+        { content }
+      );
+      const updated = data.note;
+      const stop = stopOptions.find((s) => s.id === String(trip_stop_id));
       setNotes((prev) =>
         prev.map((n) =>
-          n.id === editingNote.id ? { ...n, content, city } : n
+          n.id === editingNote.id
+            ? { ...updated, city_name: stop?.city_name }
+            : n
         )
       );
       setEditingNote(null);
     },
-    [editingNote]
+    [editingNote, tripId, stopOptions]
   );
 
-  const handleDeleteNote = useCallback((id: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-  }, []);
+  // Delete note
+  const handleDeleteNote = useCallback(
+    async (id: string) => {
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      try {
+        await api.delete(`/api/trips/${tripId}/notes/${id}`);
+      } catch {
+        // Reload on failure
+        const { data } = await api.get(`/api/trips/${tripId}/notes`);
+        setNotes(data.notes ?? []);
+      }
+    },
+    [tripId]
+  );
 
   const openEditModal = useCallback((note: Note) => {
     setEditingNote(note);
@@ -350,6 +367,14 @@ export default function TripNotesPage() {
     setEditingNote(null);
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <SpinnerGap size={32} className="animate-spin text-ember-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="journal-bg min-h-screen">
       <div className="max-w-3xl mx-auto px-4 pt-6 pb-24">
@@ -363,7 +388,7 @@ export default function TripNotesPage() {
             Trip Notes
           </h1>
           <p className="text-sm text-charcoal-400 mt-1">
-            Your personal travel journal
+            Your personal travel journal · {notes.length} {notes.length === 1 ? 'note' : 'notes'}
           </p>
         </motion.div>
 
@@ -404,6 +429,7 @@ export default function TripNotesPage() {
       <NoteModal
         isOpen={isModalOpen}
         editingNote={editingNote}
+        stopOptions={stopOptions}
         onClose={closeModal}
         onSave={editingNote ? handleEditNote : handleAddNote}
       />

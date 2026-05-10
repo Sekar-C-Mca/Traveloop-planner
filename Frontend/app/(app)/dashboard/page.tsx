@@ -15,188 +15,30 @@ import {
   PlusCircle,
   Compass,
   Backpack,
+  SpinnerGap,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth";
+import { fetchTrips, fetchCities } from "@/lib/api-hooks";
+import type { Trip, City } from "@/types";
 
 // ---------------------------------------------------------------------------
-// Types
+// Animated counter
 // ---------------------------------------------------------------------------
 
-interface StatCard {
-  label: string;
-  value: number;
-  icon: React.ElementType;
-  color: string;
-}
-
-interface UpcomingTrip {
-  id: string;
-  name: string;
-  coverUrl: string;
-  dateRange: string;
-  cityCount: number;
-  budget: number;
-}
-
-interface TrendingCity {
-  name: string;
-  country: string;
-  imageUrl: string;
-  costIndex: number;
-}
-
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const stats: StatCard[] = [
-  {
-    label: "Total Trips",
-    value: 12,
-    icon: MapTrifold,
-    color: "text-ember-500",
-  },
-  {
-    label: "Countries Visited",
-    value: 5,
-    icon: Globe,
-    color: "text-forest-500",
-  },
-  {
-    label: "Days Travelled",
-    value: 47,
-    icon: CalendarBlank,
-    color: "text-sand-500",
-  },
-  {
-    label: "Upcoming Trips",
-    value: 3,
-    icon: Clock,
-    color: "text-charcoal-500",
-  },
-];
-
-const upcomingTrips: UpcomingTrip[] = [
-  {
-    id: "1",
-    name: "Rajasthan Road Trip",
-    coverUrl:
-      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=800&q=80",
-    dateRange: "15 Jul – 28 Jul 2026",
-    cityCount: 4,
-    budget: 45000,
-  },
-  {
-    id: "2",
-    name: "Bali Wellness Retreat",
-    coverUrl:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=800&q=80",
-    dateRange: "10 Aug – 20 Aug 2026",
-    cityCount: 2,
-    budget: 72000,
-  },
-  {
-    id: "3",
-    name: "Goa Beach Escape",
-    coverUrl:
-      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=800&q=80",
-    dateRange: "1 Sep – 7 Sep 2026",
-    cityCount: 1,
-    budget: 25000,
-  },
-];
-
-const trendingCities: TrendingCity[] = [
-  {
-    name: "Jaipur",
-    country: "India",
-    imageUrl:
-      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=400&q=80",
-    costIndex: 1,
-  },
-  {
-    name: "Bali",
-    country: "Indonesia",
-    imageUrl:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=400&q=80",
-    costIndex: 2,
-  },
-  {
-    name: "Tokyo",
-    country: "Japan",
-    imageUrl:
-      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=400&q=80",
-    costIndex: 3,
-  },
-  {
-    name: "Goa",
-    country: "India",
-    imageUrl:
-      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=400&q=80",
-    costIndex: 1,
-  },
-  {
-    name: "Paris",
-    country: "France",
-    imageUrl:
-      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=400&q=80",
-    costIndex: 3,
-  },
-  {
-    name: "Dubai",
-    country: "UAE",
-    imageUrl:
-      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=400&q=80",
-    costIndex: 3,
-  },
-  {
-    name: "Rome",
-    country: "Italy",
-    imageUrl:
-      "https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=400&q=80",
-    costIndex: 3,
-  },
-  {
-    name: "Barcelona",
-    country: "Spain",
-    imageUrl:
-      "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=400&q=80",
-    costIndex: 2,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Animated counter component
-// ---------------------------------------------------------------------------
-
-function AnimatedCounter({
-  value,
-  duration = 1.2,
-}: {
-  value: number;
-  duration?: number;
-}) {
+function AnimatedCounter({ value, duration = 1.2 }: { value: number; duration?: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true });
   const motionVal = useMotionValue(0);
-  const springVal = useSpring(motionVal, {
-    bounce: 0,
-    duration: duration * 1000,
-  });
+  const springVal = useSpring(motionVal, { bounce: 0, duration: duration * 1000 });
   const [display, setDisplay] = useState(0);
 
   useEffect(() => {
-    if (isInView) {
-      motionVal.set(value);
-    }
+    if (isInView) motionVal.set(value);
   }, [isInView, motionVal, value]);
 
   useEffect(() => {
-    const unsubscribe = springVal.on("change", (latest) => {
-      setDisplay(Math.round(latest));
-    });
-    return unsubscribe;
+    return springVal.on("change", (latest) => setDisplay(Math.round(latest)));
   }, [springVal]);
 
   return <span ref={ref}>{display}</span>;
@@ -206,7 +48,14 @@ function AnimatedCounter({
 // Stat card
 // ---------------------------------------------------------------------------
 
-function StatCard({ label, value, icon: Icon, color }: StatCard) {
+interface StatCardProps {
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  color: string;
+}
+
+function StatCard({ label, value, icon: Icon, color }: StatCardProps) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -214,12 +63,7 @@ function StatCard({ label, value, icon: Icon, color }: StatCard) {
       transition={{ duration: 0.4 }}
       className="warm-card flex items-center gap-4 p-5"
     >
-      <div
-        className={cn(
-          "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sand-50",
-          color,
-        )}
-      >
+      <div className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sand-50", color)}>
         <Icon size={24} weight="duotone" />
       </div>
       <div>
@@ -233,10 +77,13 @@ function StatCard({ label, value, icon: Icon, color }: StatCard) {
 }
 
 // ---------------------------------------------------------------------------
-// Upcoming trip card
+// Trip card
 // ---------------------------------------------------------------------------
 
-function TripCard({ trip }: { trip: UpcomingTrip }) {
+function TripCard({ trip }: { trip: Trip }) {
+  const dateRange = `${new Date(trip.start_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })} – ${new Date(trip.end_date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`;
+  const stopCount = (trip.stops ?? []).length;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -244,42 +91,50 @@ function TripCard({ trip }: { trip: UpcomingTrip }) {
       transition={{ duration: 0.4, delay: 0.1 }}
       className="warm-card overflow-hidden transition-shadow hover:shadow-warm-lg"
     >
-      <div className="relative h-[200px] w-full overflow-hidden rounded-t-xl">
-        <Image
-          src={trip.coverUrl}
-          alt={trip.name}
-          fill
-          className="object-cover transition-transform duration-500 hover:scale-105"
-          sizes="(max-width: 768px) 100vw, 33vw"
-        />
-      </div>
-      <div className="p-4">
-        <h3 className="font-display text-lg font-semibold text-charcoal-800">
-          {trip.name}
-        </h3>
-        <div className="mt-2 space-y-1.5">
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <CalendarIcon size={16} className="text-charcoal-400" />
-            <span>{trip.dateRange}</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <MapPin size={16} className="text-charcoal-400" />
-            <span>
-              {trip.cityCount} {trip.cityCount === 1 ? "city" : "cities"}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-charcoal-600">
-            <CurrencyInr size={16} className="text-charcoal-400" />
-            <span>
-              {new Intl.NumberFormat("en-IN", {
-                style: "currency",
-                currency: "INR",
-                maximumFractionDigits: 0,
-              }).format(trip.budget)}
-            </span>
+      <Link href={`/trips/${trip.id}`}>
+        <div className="relative h-[180px] sm:h-[200px] w-full overflow-hidden rounded-t-xl bg-sand-100">
+          {trip.cover_photo_url ? (
+            <Image
+              src={trip.cover_photo_url}
+              alt={trip.name}
+              fill
+              className="object-cover transition-transform duration-500 hover:scale-105"
+              sizes="(max-width: 768px) 100vw, 33vw"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <MapTrifold size={40} className="text-sand-300" weight="duotone" />
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <h3 className="font-display text-lg font-semibold text-charcoal-800 truncate">{trip.name}</h3>
+          <div className="mt-2 space-y-1.5">
+            <div className="flex items-center gap-2 text-sm text-charcoal-600">
+              <CalendarIcon size={16} className="text-charcoal-400" />
+              <span>{dateRange}</span>
+            </div>
+            {stopCount > 0 && (
+              <div className="flex items-center gap-2 text-sm text-charcoal-600">
+                <MapPin size={16} className="text-charcoal-400" />
+                <span>{stopCount} {stopCount === 1 ? "city" : "cities"}</span>
+              </div>
+            )}
+            {trip.total_budget && (
+              <div className="flex items-center gap-2 text-sm text-charcoal-600">
+                <CurrencyInr size={16} className="text-charcoal-400" />
+                <span>
+                  {new Intl.NumberFormat("en-IN", {
+                    style: "currency",
+                    currency: trip.currency ?? "INR",
+                    maximumFractionDigits: 0,
+                  }).format(Number(trip.total_budget))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </Link>
     </motion.div>
   );
 }
@@ -288,89 +143,117 @@ function TripCard({ trip }: { trip: UpcomingTrip }) {
 // Trending city card
 // ---------------------------------------------------------------------------
 
-function costLabel(index: number): string {
-  if (index <= 1) return "$";
-  if (index <= 2) return "$$";
+function costLabel(index: number | null): string {
+  if (!index || index <= 3) return "$";
+  if (index <= 6) return "$$";
   return "$$$";
 }
 
-function CityCard({ city }: { city: TrendingCity }) {
+function CityCard({ city }: { city: City }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3 }}
-      className="relative w-[160px] shrink-0 overflow-hidden rounded-xl"
-    >
-      <div className="relative h-[220px] w-full">
-        <Image
-          src={city.imageUrl}
-          alt={city.name}
-          fill
-          className="object-cover"
-          sizes="160px"
-        />
-        {/* Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/80 via-charcoal-900/30 to-transparent" />
-        {/* Content */}
-        <div className="absolute inset-x-0 bottom-0 p-3">
-          <p className="font-display text-base font-semibold text-white">
-            {city.name}
-          </p>
-          <p className="text-xs text-sand-200">{city.country}</p>
+    <Link href="/explore">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3 }}
+        className="relative w-[160px] shrink-0 overflow-hidden rounded-xl"
+      >
+        <div className="relative h-[220px] w-full">
+          {city.image_url ? (
+            <Image src={city.image_url} alt={city.name} fill className="object-cover" sizes="160px" />
+          ) : (
+            <div className="w-full h-full bg-sand-200" />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-charcoal-900/80 via-charcoal-900/30 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 p-3">
+            <p className="font-display text-base font-semibold text-white">{city.name}</p>
+            <p className="text-xs text-sand-200">{city.country}</p>
+          </div>
+          <div className="absolute right-2 top-2 rounded-full bg-charcoal-900/60 px-2 py-0.5 text-xs font-semibold text-sand-100 backdrop-blur-sm">
+            {costLabel(Number(city.cost_index))}
+          </div>
         </div>
-        {/* Cost badge */}
-        <div className="absolute right-2 top-2 rounded-full bg-charcoal-900/60 px-2 py-0.5 text-xs font-semibold text-sand-100 backdrop-blur-sm">
-          {costLabel(city.costIndex)}
-        </div>
-      </div>
-    </motion.div>
+      </motion.div>
+    </Link>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Quick action pill
+// Skeleton loader
 // ---------------------------------------------------------------------------
 
-interface QuickAction {
-  label: string;
-  icon: React.ElementType;
-  href: string;
-  color: string;
-  bg: string;
+function SkeletonCard() {
+  return (
+    <div className="warm-card overflow-hidden animate-pulse">
+      <div className="h-[180px] bg-sand-100 rounded-t-xl" />
+      <div className="p-4 space-y-2">
+        <div className="h-4 bg-sand-100 rounded w-3/4" />
+        <div className="h-3 bg-sand-100 rounded w-1/2" />
+      </div>
+    </div>
+  );
 }
 
-const quickActions: QuickAction[] = [
-  {
-    label: "Plan New Trip",
-    icon: PlusCircle,
-    href: "/trips/new",
-    color: "text-ember-500",
-    bg: "bg-ember-50 hover:bg-ember-100",
-  },
-  {
-    label: "Browse Cities",
-    icon: Compass,
-    href: "/explore",
-    color: "text-forest-500",
-    bg: "bg-forest-50 hover:bg-forest-100",
-  },
-  {
-    label: "View Packing List",
-    icon: Backpack,
-    href: "/trips",
-    color: "text-sand-500",
-    bg: "bg-sand-50 hover:bg-sand-100",
-  },
+// ---------------------------------------------------------------------------
+// Quick actions (static — these are navigation links)
+// ---------------------------------------------------------------------------
+
+const quickActions = [
+  { label: "Plan New Trip", icon: PlusCircle, href: "/trips/new", color: "text-ember-500", bg: "bg-ember-50 hover:bg-ember-100" },
+  { label: "Browse Cities", icon: Compass, href: "/explore", color: "text-forest-500", bg: "bg-forest-50 hover:bg-forest-100" },
+  { label: "View Packing List", icon: Backpack, href: "/trips", color: "text-sand-500", bg: "bg-sand-50 hover:bg-sand-100" },
 ];
 
 // ---------------------------------------------------------------------------
-// Dashboard page
+// Dashboard
 // ---------------------------------------------------------------------------
 
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.name?.split(" ")[0] ?? "Traveler";
+
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [allTrips, setAllTrips] = useState<Trip[]>([]);
+  const [trendingCities, setTrendingCities] = useState<City[]>([]);
+  const [tripsLoading, setTripsLoading] = useState(true);
+  const [citiesLoading, setCitiesLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch upcoming trips for the cards
+    fetchTrips({ status: "upcoming" })
+      .then(setTrips)
+      .catch(() => setTrips([]))
+      .finally(() => setTripsLoading(false));
+
+    // Fetch all trips for stats computation
+    fetchTrips().then(setAllTrips).catch(() => setAllTrips([]));
+
+    // Fetch top cities by popularity for the trending row
+    fetchCities({ sort: "popularity", limit: 8 })
+      .then((res) => setTrendingCities(res.cities))
+      .catch(() => setTrendingCities([]))
+      .finally(() => setCitiesLoading(false));
+  }, []);
+
+  // Compute stats from real trip data
+  const totalTrips = allTrips.length;
+  const upcomingCount = allTrips.filter((t) => t.status === "upcoming").length;
+  const countriesVisited = new Set(
+    allTrips.flatMap((t) => (t.stops ?? []).map((s: any) => s.city?.country).filter(Boolean))
+  ).size;
+  const daysTravelled = allTrips
+    .filter((t) => t.status === "completed")
+    .reduce((sum, t) => {
+      const diff = Math.abs(new Date(t.end_date).getTime() - new Date(t.start_date).getTime());
+      return sum + Math.ceil(diff / (1000 * 60 * 60 * 24));
+    }, 0);
+
+  const stats = [
+    { label: "Total Trips", value: totalTrips, icon: MapTrifold, color: "text-ember-500" },
+    { label: "Countries Visited", value: countriesVisited, icon: Globe, color: "text-forest-500" },
+    { label: "Days Travelled", value: daysTravelled, icon: CalendarBlank, color: "text-sand-500" },
+    { label: "Upcoming Trips", value: upcomingCount, icon: Clock, color: "text-charcoal-500" },
+  ];
 
   return (
     <div className="space-y-8">
@@ -397,9 +280,19 @@ export default function DashboardPage() {
           Your upcoming trips
         </h2>
         <div className="mt-3 sm:mt-4 grid gap-4 sm:gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {upcomingTrips.map((trip) => (
-            <TripCard key={trip.id} trip={trip} />
-          ))}
+          {tripsLoading ? (
+            [1, 2, 3].map((i) => <SkeletonCard key={i} />)
+          ) : trips.length === 0 ? (
+            <div className="col-span-full flex flex-col items-center py-12 text-center">
+              <MapTrifold size={40} className="text-sand-300 mb-3" weight="duotone" />
+              <p className="text-charcoal-500 text-sm">No upcoming trips yet</p>
+              <Link href="/trips/new" className="mt-3 text-ember-500 text-sm font-medium hover:underline">
+                Plan your first trip →
+              </Link>
+            </div>
+          ) : (
+            trips.slice(0, 3).map((trip) => <TripCard key={trip.id} trip={trip} />)
+          )}
         </div>
       </section>
 
@@ -409,19 +302,23 @@ export default function DashboardPage() {
           Trending Destinations
         </h2>
         <div className="mt-4 flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory scrollbar-thin">
-          {trendingCities.map((city) => (
-            <div key={city.name} className="snap-start">
-              <CityCard city={city} />
-            </div>
-          ))}
+          {citiesLoading ? (
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="w-[160px] h-[220px] shrink-0 rounded-xl bg-sand-100 animate-pulse" />
+            ))
+          ) : (
+            trendingCities.map((city) => (
+              <div key={city.id} className="snap-start">
+                <CityCard city={city} />
+              </div>
+            ))
+          )}
         </div>
       </section>
 
       {/* Quick actions */}
       <section>
-        <h2 className="font-display text-xl font-semibold text-charcoal-800">
-          Quick Actions
-        </h2>
+        <h2 className="font-display text-xl font-semibold text-charcoal-800">Quick Actions</h2>
         <div className="mt-3 sm:mt-4 flex flex-wrap gap-2 sm:gap-3">
           {quickActions.map((action) => {
             const Icon = action.icon;
@@ -432,7 +329,7 @@ export default function DashboardPage() {
                 className={cn(
                   "pill-button inline-flex items-center gap-2 border border-transparent transition-colors",
                   action.bg,
-                  action.color,
+                  action.color
                 )}
               >
                 <Icon size={20} weight="duotone" />

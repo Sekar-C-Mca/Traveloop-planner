@@ -26,29 +26,29 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: House },
-  { label: 'My Trips', href: '/trips', icon: MapTrifold },
-  { label: 'New Trip', href: '/trips/new', icon: PlusCircle },
-  { label: 'Explore Cities', href: '/explore', icon: Compass },
-  { label: 'Packing Lists', href: '/trips', icon: Backpack },
-  { label: 'Trip Journal', href: '/trips', icon: BookOpen },
-  { label: 'Settings', href: '/settings', icon: Gear },
-  { label: 'Admin', href: '/admin', icon: ShieldCheck },
+  { label: 'Dashboard',     href: '/dashboard',       icon: House       },
+  { label: 'My Trips',      href: '/trips',            icon: MapTrifold  },
+  { label: 'New Trip',      href: '/trips/new',        icon: PlusCircle  },
+  { label: 'Explore Cities',href: '/explore',          icon: Compass     },
+  { label: 'Packing Lists', href: '/packing',          icon: Backpack    },
+  { label: 'Trip Journal',  href: '/journal',          icon: BookOpen    },
+  { label: 'Settings',      href: '/settings',         icon: Gear        },
+  { label: 'Admin',         href: '/admin',            icon: ShieldCheck },
 ];
 
 function isActivePath(pathname: string, href: string): boolean {
-  if (href === '/dashboard') {
-    return pathname === '/dashboard' || pathname === '/';
-  }
-  if (href === '/admin') {
-    return pathname === '/admin' || pathname.startsWith('/admin/');
-  }
-  // For /trips/new, only match exactly
-  if (href === '/trips/new') {
-    return pathname === '/trips/new';
-  }
+  // Dashboard: exact or root
+  if (href === '/dashboard') return pathname === '/dashboard' || pathname === '/';
+  // Admin: exact or sub-paths
+  if (href === '/admin') return pathname === '/admin' || pathname.startsWith('/admin/');
+  // New Trip: exact only (so /trips doesn't also activate this)
+  if (href === '/trips/new') return pathname === '/trips/new';
+  // My Trips: only the /trips root (not /trips/new or /trips/:id detail)
+  if (href === '/trips') return pathname === '/trips';
+  // All others: exact or direct child
   return pathname === href || pathname.startsWith(href + '/');
 }
+
 
 function SidebarContent() {
   const pathname = usePathname();

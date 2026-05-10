@@ -29,7 +29,7 @@ export function AdminAnalytics() {
         <h3 className="mb-4 font-display text-lg font-semibold text-charcoal-800">
           Growth Metrics
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={220}>
           <LineChart data={monthlyData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#EBD9B8" />
             <XAxis dataKey="month" stroke="#6B6259" />
@@ -67,7 +67,7 @@ export function AdminAnalytics() {
         <h3 className="mb-4 font-display text-lg font-semibold text-charcoal-800">
           Trip Budget Distribution
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={220}>
           <BarChart data={budgetData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#EBD9B8" />
             <XAxis dataKey="range" stroke="#6B6259" />
@@ -90,7 +90,7 @@ export function AdminAnalytics() {
       </Card>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <Card className="border border-sand-200 p-6">
           <h4 className="text-sm font-medium text-charcoal-600">Average Trip Duration</h4>
           <p className="mt-2 text-3xl font-bold text-charcoal-800">8.2 days</p>

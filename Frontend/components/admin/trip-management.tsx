@@ -1,138 +1,55 @@
 'use client';
 
-import React, { useState } from 'react';
-import {
-  Trash,
-  PencilSimple,
-  Eye,
-  MagnifyingGlass,
-  MapPin,
-  CalendarBlank,
-} from '@phosphor-icons/react';
+import React, { useState, useEffect } from 'react';
+import { Eye, MagnifyingGlass, SpinnerGap } from '@phosphor-icons/react';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
+import { fetchAdminTrips, type AdminTrip } from '@/lib/api-hooks';
 
-interface Trip {
-  id: string;
-  name: string;
-  creator: string;
-  cities: number;
-  startDate: string;
-  endDate: string;
-  budget: number;
-  status: 'upcoming' | 'ongoing' | 'completed';
+function getStatusColor(status: string) {
+  switch (status) {
+    case 'upcoming': return 'bg-sand-100 text-sand-700';
+    case 'ongoing': return 'bg-forest-100 text-forest-700';
+    case 'completed': return 'bg-charcoal-100 text-charcoal-700';
+    default: return 'bg-charcoal-100 text-charcoal-700';
+  }
 }
 
-const mockTrips: Trip[] = [
-  {
-    id: '1',
-    name: 'Tokyo Adventure',
-    creator: 'Sarah Chen',
-    cities: 3,
-    startDate: '2024-06-15',
-    endDate: '2024-06-22',
-    budget: 2500,
-    status: 'upcoming',
-  },
-  {
-    id: '2',
-    name: 'Europe Grand Tour',
-    creator: 'John Smith',
-    cities: 5,
-    startDate: '2024-05-20',
-    endDate: '2024-06-10',
-    budget: 5000,
-    status: 'ongoing',
-  },
-  {
-    id: '3',
-    name: 'Bali Escape',
-    creator: 'Emma Wilson',
-    cities: 2,
-    startDate: '2024-04-01',
-    endDate: '2024-04-10',
-    budget: 1500,
-    status: 'completed',
-  },
-  {
-    id: '4',
-    name: 'New York Experience',
-    creator: 'Michael Johnson',
-    cities: 1,
-    startDate: '2024-07-01',
-    endDate: '2024-07-08',
-    budget: 3000,
-    status: 'upcoming',
-  },
-  {
-    id: '5',
-    name: 'South America Explorer',
-    creator: 'Lisa Anderson',
-    cities: 4,
-    startDate: '2024-08-15',
-    endDate: '2024-09-05',
-    budget: 4200,
-    status: 'upcoming',
-  },
-];
-
 export function AdminTripManagement() {
+  const [trips, setTrips] = useState<AdminTrip[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [selectedTrip, setSelectedTrip] = useState<AdminTrip | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const filteredTrips = mockTrips.filter(
-    (trip) =>
-      trip.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      trip.creator.toLowerCase().includes(searchTerm.toLowerCase())
+  useEffect(() => {
+    fetchAdminTrips({ limit: 50 })
+      .then(({ trips }) => setTrips(trips))
+      .catch(() => setTrips([]))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = trips.filter(
+    (t) =>
+      t.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.owner_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleViewTrip = (trip: Trip) => {
-    setSelectedTrip(trip);
-    setIsDetailDialogOpen(true);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'upcoming':
-        return 'bg-sand-100 text-sand-700';
-      case 'ongoing':
-        return 'bg-forest-100 text-forest-700';
-      case 'completed':
-        return 'bg-charcoal-100 text-charcoal-700';
-      default:
-        return 'bg-charcoal-100 text-charcoal-700';
-    }
-  };
 
   return (
     <div className="space-y-6">
-      {/* Search Bar */}
       <Card className="border border-sand-200">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           <div className="relative">
-            <MagnifyingGlass
-              size={20}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400"
-            />
+            <MagnifyingGlass size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-charcoal-400" />
             <Input
-              placeholder="Search trips by name or creator..."
+              placeholder="Search trips by name or owner..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -141,120 +58,82 @@ export function AdminTripManagement() {
         </div>
       </Card>
 
-      {/* Trips Table */}
       <Card className="border border-sand-200 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-sand-50 hover:bg-sand-50">
-              <TableHead className="text-charcoal-700 font-semibold">Trip Name</TableHead>
-              <TableHead className="text-charcoal-700 font-semibold">Creator</TableHead>
-              <TableHead className="text-charcoal-700 font-semibold text-center">
-                Cities
-              </TableHead>
-              <TableHead className="text-charcoal-700 font-semibold">Duration</TableHead>
-              <TableHead className="text-charcoal-700 font-semibold text-right">
-                Budget
-              </TableHead>
-              <TableHead className="text-charcoal-700 font-semibold">Status</TableHead>
-              <TableHead className="text-right text-charcoal-700 font-semibold">
-                Actions
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredTrips.map((trip) => (
-              <TableRow key={trip.id} className="hover:bg-sand-50">
-                <TableCell className="font-medium text-charcoal-800">
-                  {trip.name}
-                </TableCell>
-                <TableCell className="text-charcoal-600">{trip.creator}</TableCell>
-                <TableCell className="text-center text-charcoal-800 font-medium">
-                  {trip.cities}
-                </TableCell>
-                <TableCell className="text-charcoal-600 text-sm">
-                  {new Date(trip.startDate).toLocaleDateString()} -{' '}
-                  {new Date(trip.endDate).toLocaleDateString()}
-                </TableCell>
-                <TableCell className="text-right font-medium text-charcoal-800">
-                  ${trip.budget.toLocaleString()}
-                </TableCell>
-                <TableCell>
-                  <span className={`inline-flex rounded-full px-3 py-1 text-xs font-medium capitalize ${getStatusColor(trip.status)}`}>
-                    {trip.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => handleViewTrip(trip)}
-                      className="rounded-lg p-2 text-charcoal-600 hover:bg-sand-100 transition-colors"
-                      title="View details"
-                    >
-                      <Eye size={18} />
-                    </button>
-                    <button
-                      className="rounded-lg p-2 text-charcoal-600 hover:bg-sand-100 transition-colors"
-                      title="Edit trip"
-                    >
-                      <PencilSimple size={18} />
-                    </button>
-                    <button
-                      className="rounded-lg p-2 text-charcoal-600 hover:bg-ember-100 hover:text-ember-600 transition-colors"
-                      title="Delete trip"
-                    >
-                      <Trash size={18} />
-                    </button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        {loading ? (
+          <div className="flex justify-center py-16">
+            <SpinnerGap size={28} className="animate-spin text-ember-400" />
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-sand-50 hover:bg-sand-50">
+                  <TableHead className="text-charcoal-700 font-semibold">Trip Name</TableHead>
+                  <TableHead className="text-charcoal-700 font-semibold hidden sm:table-cell">Owner</TableHead>
+                  <TableHead className="text-charcoal-700 font-semibold text-center">Stops</TableHead>
+                  <TableHead className="text-charcoal-700 font-semibold hidden md:table-cell">Dates</TableHead>
+                  <TableHead className="text-charcoal-700 font-semibold">Status</TableHead>
+                  <TableHead className="text-right text-charcoal-700 font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-charcoal-400 text-sm">
+                      No trips found
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filtered.map((trip) => (
+                    <TableRow key={trip.id} className="hover:bg-sand-50">
+                      <TableCell className="font-medium text-charcoal-800 max-w-[140px] truncate">{trip.name}</TableCell>
+                      <TableCell className="text-charcoal-600 hidden sm:table-cell">{trip.owner_name}</TableCell>
+                      <TableCell className="text-center text-charcoal-800 font-medium">{trip.stop_count}</TableCell>
+                      <TableCell className="text-charcoal-600 text-sm hidden md:table-cell">
+                        {new Date(trip.start_date).toLocaleDateString()} – {new Date(trip.end_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <span className={`inline-flex rounded-full px-2 sm:px-3 py-1 text-xs font-medium capitalize ${getStatusColor(trip.status)}`}>
+                          {trip.status}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <button
+                          onClick={() => { setSelectedTrip(trip); setIsDetailOpen(true); }}
+                          className="rounded-lg p-1.5 sm:p-2 text-charcoal-600 hover:bg-sand-100 transition-colors"
+                          title="View details"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </Card>
 
-      {/* Trip Details Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-xl">Trip Details</DialogTitle>
           </DialogHeader>
           {selectedTrip && (
             <div className="space-y-4">
-              <div>
-                <p className="text-sm font-medium text-charcoal-600">Trip Name</p>
-                <p className="text-charcoal-800">{selectedTrip.name}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-charcoal-600">Creator</p>
-                <p className="text-charcoal-800">{selectedTrip.creator}</p>
-              </div>
+              <div><p className="text-sm font-medium text-charcoal-600">Trip Name</p><p className="text-charcoal-800">{selectedTrip.name}</p></div>
+              <div><p className="text-sm font-medium text-charcoal-600">Owner</p><p className="text-charcoal-800">{selectedTrip.owner_name}</p></div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-charcoal-600">Cities</p>
-                  <p className="text-charcoal-800">{selectedTrip.cities}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-charcoal-600">Budget</p>
-                  <p className="text-charcoal-800">${selectedTrip.budget}</p>
-                </div>
+                <div><p className="text-sm font-medium text-charcoal-600">City Stops</p><p className="text-charcoal-800">{selectedTrip.stop_count}</p></div>
+                <div><p className="text-sm font-medium text-charcoal-600">Visibility</p><p className="text-charcoal-800">{selectedTrip.is_public ? 'Public' : 'Private'}</p></div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-charcoal-600">Duration</p>
-                <p className="text-charcoal-800">
-                  {new Date(selectedTrip.startDate).toLocaleDateString()} -{' '}
-                  {new Date(selectedTrip.endDate).toLocaleDateString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-charcoal-600">Status</p>
-                <p className="text-charcoal-800 capitalize">{selectedTrip.status}</p>
-              </div>
+              <div><p className="text-sm font-medium text-charcoal-600">Dates</p><p className="text-charcoal-800">{new Date(selectedTrip.start_date).toLocaleDateString()} – {new Date(selectedTrip.end_date).toLocaleDateString()}</p></div>
+              <div><p className="text-sm font-medium text-charcoal-600">Status</p><p className="text-charcoal-800 capitalize">{selectedTrip.status}</p></div>
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
-              Close
-            </Button>
+            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

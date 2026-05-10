@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -27,6 +27,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -47,84 +48,16 @@ interface Trip {
   status: TripStatus;
 }
 
-// ---------------------------------------------------------------------------
-// Mock data (instant — no fetch delay)
-// ---------------------------------------------------------------------------
-
-const mockTrips: Trip[] = [
-  {
-    id: "1",
-    name: "Rajasthan Road Trip",
-    coverUrl:
-      "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=600&q=75",
-    startDate: "2026-07-15",
-    endDate: "2026-07-28",
-    cityCount: 4,
-    budget: 45000,
-    currency: "INR",
-    status: "upcoming",
-  },
-  {
-    id: "2",
-    name: "Bali Wellness Retreat",
-    coverUrl:
-      "https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&w=600&q=75",
-    startDate: "2026-08-10",
-    endDate: "2026-08-20",
-    cityCount: 2,
-    budget: 72000,
-    currency: "INR",
-    status: "upcoming",
-  },
-  {
-    id: "3",
-    name: "Goa Beach Escape",
-    coverUrl:
-      "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=600&q=75",
-    startDate: "2026-05-01",
-    endDate: "2026-05-15",
-    cityCount: 1,
-    budget: 25000,
-    currency: "INR",
-    status: "ongoing",
-  },
-  {
-    id: "4",
-    name: "Scandinavian Adventure",
-    coverUrl:
-      "https://images.unsplash.com/photo-1506966953602-c20cc11f75e3?auto=format&fit=crop&w=600&q=75",
-    startDate: "2026-05-05",
-    endDate: "2026-05-20",
-    cityCount: 3,
-    budget: 150000,
-    currency: "INR",
-    status: "ongoing",
-  },
-  {
-    id: "5",
-    name: "Tokyo Explorer",
-    coverUrl:
-      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=600&q=75",
-    startDate: "2026-01-10",
-    endDate: "2026-01-24",
-    cityCount: 5,
-    budget: 180000,
-    currency: "INR",
-    status: "completed",
-  },
-  {
-    id: "6",
-    name: "Kerala Backwaters",
-    coverUrl:
-      "https://images.unsplash.com/photo-1593693411515-c20261bcad6e?auto=format&fit=crop&w=600&q=75",
-    startDate: "2025-12-20",
-    endDate: "2025-12-30",
-    cityCount: 3,
-    budget: 35000,
-    currency: "INR",
-    status: "completed",
-  },
-];
+// Helper to determine trip status based on dates
+function calculateTripStatus(startDate: string, endDate: string): TripStatus {
+  const today = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  if (today > end) return "completed";
+  if (today >= start && today <= end) return "ongoing";
+  return "upcoming";
+}
 
 // ---------------------------------------------------------------------------
 // Status badge
@@ -363,8 +296,50 @@ const tabs: { key: TabFilter; label: string }[] = [
 export default function MyTripsPage() {
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
   const [search, setSearch] = useState("");
-  const [trips, setTrips] = useState<Trip[]>(mockTrips);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<Trip | null>(null);
+
+  // Fetch trips from API
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTrips() {
+      try {
+        setLoading(true);
+        const { data } = await api.get('/api/trips');
+        
+        if (!cancelled && data?.trips) {
+          const transformedTrips = data.trips.map((t: any) => ({
+            id: String(t.id),
+            name: t.name,
+            coverUrl: t.cover_photo_url || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=600&q=75',
+            startDate: t.start_date,
+            endDate: t.end_date,
+            cityCount: t.stop_count || 0,
+            budget: t.total_budget || 0,
+            currency: t.currency || 'INR',
+            status: calculateTripStatus(t.start_date, t.end_date),
+          }));
+          
+          setTrips(transformedTrips);
+        }
+      } catch (err) {
+        console.error('Failed to load trips:', err);
+        setTrips([]);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadTrips();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Derived — memoised so tab/search don't re-create the array on every keystroke
   const filteredTrips = useMemo(() => {
@@ -377,10 +352,35 @@ export default function MyTripsPage() {
     return list;
   }, [trips, activeTab, search]);
 
-  const handleDeleteConfirm = useCallback(() => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deleteTarget) return;
-    setTrips((prev) => prev.filter((t) => t.id !== deleteTarget.id));
+    const id = deleteTarget.id;
+    // Optimistic remove
+    setTrips((prev) => prev.filter((t) => t.id !== id));
     setDeleteTarget(null);
+    try {
+      await api.delete(`/api/trips/${id}`);
+    } catch {
+      // Revert on failure — re-fetch from server
+      api.get<{ trips: unknown[] }>('/api/trips')
+        .then(({ data }) => {
+          const raw = data.trips ?? [];
+          setTrips(
+            raw.map((t: any) => ({
+              id: String(t.id),
+              name: t.name ?? '',
+              coverUrl: t.cover_photo_url ?? '',
+              startDate: t.start_date,
+              endDate: t.end_date,
+              cityCount: t.stop_count ?? 0,
+              budget: Number(t.total_budget) || 0,
+              currency: t.currency ?? 'INR',
+              status: calculateTripStatus(t.start_date, t.end_date),
+            }))
+          );
+        })
+        .catch(() => {});
+    }
   }, [deleteTarget]);
 
   const handleTabChange = useCallback((key: TabFilter) => {
@@ -397,7 +397,7 @@ export default function MyTripsPage() {
             My Trips
           </h1>
           <p className="mt-0.5 text-sm text-charcoal-500">
-            {trips.length} {trips.length === 1 ? "trip" : "trips"} planned
+            {loading ? 'Loading...' : `${trips.length} ${trips.length === 1 ? "trip" : "trips"} planned`}
           </p>
         </div>
         <Link
@@ -471,40 +471,55 @@ export default function MyTripsPage() {
         </div>
       </div>
 
+      {/* ── Loading state ──────────────────────────────────────────────── */}
+      {loading && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          {Array.from({ length: 6 }).map((_, i) => (
+            <TripCardSkeleton key={i} />
+          ))}
+        </motion.div>
+      )}
+
       {/* ── Grid ───────────────────────────────────────────────────────── */}
-      <AnimatePresence mode="popLayout" initial={false}>
-        {filteredTrips.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            <EmptyState isFiltered={activeTab !== "all" || !!search} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            <AnimatePresence mode="popLayout" initial={false}>
-              {filteredTrips.map((trip, i) => (
-                <TripCard
-                  key={trip.id}
-                  trip={trip}
-                  index={i}
-                  onDelete={setDeleteTarget}
-                />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {!loading && (
+        <AnimatePresence mode="popLayout" initial={false}>
+          {filteredTrips.length === 0 ? (
+            <motion.div
+              key="empty"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <EmptyState isFiltered={activeTab !== "all" || !!search} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="grid"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              <AnimatePresence mode="popLayout" initial={false}>
+                {filteredTrips.map((trip, i) => (
+                  <TripCard
+                    key={trip.id}
+                    trip={trip}
+                    index={i}
+                    onDelete={setDeleteTarget}
+                  />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* ── Delete modal ───────────────────────────────────────────────── */}
       <DeleteConfirmModal

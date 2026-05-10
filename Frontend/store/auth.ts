@@ -29,6 +29,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (user, token) => {
     if (typeof window !== "undefined") {
       localStorage.setItem("traveloop_token", token);
+      localStorage.setItem("traveloop_user", JSON.stringify(user));
     }
     set({ user, token, isAuthenticated: true, isLoading: false });
   },
@@ -36,6 +37,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAuth: () => {
     if (typeof window !== "undefined") {
       localStorage.removeItem("traveloop_token");
+      localStorage.removeItem("traveloop_user");
     }
     set({ user: null, token: null, isAuthenticated: false, isLoading: false });
   },
@@ -51,7 +53,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     try {
       const token = localStorage.getItem("traveloop_token");
-      set({ token, isAuthenticated: !!token, isLoading: false });
+      const userRaw = localStorage.getItem("traveloop_user");
+      const user = userRaw ? JSON.parse(userRaw) : null;
+      set({ token, user, isAuthenticated: !!token, isLoading: false });
     } catch {
       set({ isLoading: false });
     }

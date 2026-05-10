@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   PlusCircle,
@@ -13,8 +14,10 @@ import {
   Drop,
   Pill,
   DotsThree,
+  SpinnerGap,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
+import api from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -31,9 +34,9 @@ type PackingCategory =
 
 interface PackingItem {
   id: string;
-  name: string;
-  category: Exclude<PackingCategory, 'all'>;
-  checked: boolean;
+  item_name: string;           // backend field
+  category: Exclude<PackingCategory, 'all'> | null;
+  is_packed: boolean;          // backend field
 }
 
 // ---------------------------------------------------------------------------
@@ -47,98 +50,34 @@ interface CategoryMeta {
 }
 
 const CATEGORY_META: Record<Exclude<PackingCategory, 'all'>, CategoryMeta> = {
-  clothing: {
-    label: 'Clothing',
-    icon: CoatHanger,
-    color: 'bg-ember-100 text-ember-700',
-  },
-  documents: {
-    label: 'Documents',
-    icon: FileText,
-    color: 'bg-sand-200 text-sand-700',
-  },
-  electronics: {
-    label: 'Electronics',
-    icon: DeviceMobile,
-    color: 'bg-forest-100 text-forest-700',
-  },
-  toiletries: {
-    label: 'Toiletries',
-    icon: Drop,
-    color: 'bg-charcoal-100 text-charcoal-700',
-  },
-  medicines: {
-    label: 'Medicines',
-    icon: Pill,
-    color: 'bg-ember-50 text-ember-600',
-  },
-  other: {
-    label: 'Other',
-    icon: DotsThree,
-    color: 'bg-sand-100 text-charcoal-600',
-  },
+  clothing:    { label: 'Clothing',     icon: CoatHanger,    color: 'bg-ember-100 text-ember-700'    },
+  documents:   { label: 'Documents',    icon: FileText,      color: 'bg-sand-200 text-sand-700'      },
+  electronics: { label: 'Electronics', icon: DeviceMobile,  color: 'bg-forest-100 text-forest-700'  },
+  toiletries:  { label: 'Toiletries',  icon: Drop,          color: 'bg-charcoal-100 text-charcoal-700' },
+  medicines:   { label: 'Medicines',   icon: Pill,          color: 'bg-ember-50 text-ember-600'     },
+  other:       { label: 'Other',       icon: DotsThree,     color: 'bg-sand-100 text-charcoal-600'  },
 };
 
 const CATEGORY_TABS: { id: PackingCategory; label: string }[] = [
-  { id: 'all', label: 'All' },
-  { id: 'clothing', label: 'Clothing' },
-  { id: 'documents', label: 'Documents' },
+  { id: 'all',         label: 'All'         },
+  { id: 'clothing',    label: 'Clothing'    },
+  { id: 'documents',   label: 'Documents'   },
   { id: 'electronics', label: 'Electronics' },
-  { id: 'toiletries', label: 'Toiletries' },
-  { id: 'medicines', label: 'Medicines' },
-  { id: 'other', label: 'Other' },
+  { id: 'toiletries',  label: 'Toiletries'  },
+  { id: 'medicines',   label: 'Medicines'   },
+  { id: 'other',       label: 'Other'       },
 ];
-
-// ---------------------------------------------------------------------------
-// Mock data: 15 items across categories, some checked
-// ---------------------------------------------------------------------------
-
-const INITIAL_ITEMS: PackingItem[] = [
-  { id: 'p1', name: 'T-shirts (4)', category: 'clothing', checked: true },
-  { id: 'p2', name: 'Jeans (2)', category: 'clothing', checked: true },
-  { id: 'p3', name: 'Light jacket', category: 'clothing', checked: false },
-  { id: 'p4', name: 'Sunglasses', category: 'clothing', checked: false },
-  { id: 'p5', name: 'Passport', category: 'documents', checked: true },
-  { id: 'p6', name: 'Travel insurance', category: 'documents', checked: true },
-  { id: 'p7', name: 'Hotel bookings printout', category: 'documents', checked: false },
-  { id: 'p8', name: 'Phone charger', category: 'electronics', checked: true },
-  { id: 'p9', name: 'Power bank', category: 'electronics', checked: false },
-  { id: 'p10', name: 'Camera', category: 'electronics', checked: false },
-  { id: 'p11', name: 'Sunscreen SPF 50', category: 'toiletries', checked: true },
-  { id: 'p12', name: 'Toothbrush kit', category: 'toiletries', checked: false },
-  { id: 'p13', name: 'Paracetamol', category: 'medicines', checked: true },
-  { id: 'p14', name: 'Motion sickness tablets', category: 'medicines', checked: false },
-  { id: 'p15', name: 'Travel pillow', category: 'other', checked: false },
-];
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-let nextId = 100;
-function generateId(): string {
-  return `p${nextId++}`;
-}
 
 // ---------------------------------------------------------------------------
 // CategoryBadge
 // ---------------------------------------------------------------------------
 
-interface CategoryBadgeProps {
-  category: Exclude<PackingCategory, 'all'>;
-}
-
-function CategoryBadge({ category }: CategoryBadgeProps) {
+function CategoryBadge({ category }: { category: Exclude<PackingCategory, 'all'> | null }) {
+  if (!category || !CATEGORY_META[category]) return null;
   const meta = CATEGORY_META[category];
   const Icon = meta.icon;
-
   return (
-    <span
-      className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold',
-        meta.color
-      )}
-    >
+    <span className={cn('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold', meta.color)}>
       <Icon size={10} />
       {meta.label}
     </span>
@@ -151,7 +90,7 @@ function CategoryBadge({ category }: CategoryBadgeProps) {
 
 interface PackingItemRowProps {
   item: PackingItem;
-  onToggle: (id: string) => void;
+  onToggle: (id: string, current: boolean) => void;
   onDelete: (id: string) => void;
 }
 
@@ -166,30 +105,24 @@ function PackingItemRow({ item, onToggle, onDelete }: PackingItemRowProps) {
     >
       {/* Custom checkbox */}
       <button
-        onClick={() => onToggle(item.id)}
+        onClick={() => onToggle(item.id, item.is_packed)}
         className={cn(
           'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors duration-200',
-          item.checked
+          item.is_packed
             ? 'border-ember-500 bg-ember-500'
             : 'border-charcoal-300 bg-white hover:border-ember-400'
         )}
-        aria-label={item.checked ? 'Uncheck item' : 'Check item'}
+        aria-label={item.is_packed ? 'Unpack item' : 'Pack item'}
       >
-        {item.checked && (
-          <Check size={13} weight="bold" className="text-forest-500" />
-        )}
+        {item.is_packed && <Check size={13} weight="bold" className="text-white" />}
       </button>
 
       {/* Item name */}
-      <span
-        className={cn(
-          'flex-1 text-sm font-medium transition-all duration-200',
-          item.checked
-            ? 'text-charcoal-300 line-through'
-            : 'text-charcoal-800'
-        )}
-      >
-        {item.name}
+      <span className={cn(
+        'flex-1 text-sm font-medium transition-all duration-200',
+        item.is_packed ? 'text-charcoal-300 line-through' : 'text-charcoal-800'
+      )}>
+        {item.item_name}
       </span>
 
       {/* Category badge */}
@@ -212,142 +145,171 @@ function PackingItemRow({ item, onToggle, onDelete }: PackingItemRowProps) {
 // ---------------------------------------------------------------------------
 
 export default function PackingPage() {
-  const [items, setItems] = useState<PackingItem[]>(INITIAL_ITEMS);
+  const params = useParams();
+  const tripId = params.id as string;
+
+  const [items, setItems] = useState<PackingItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ total: 0, packed: 0, percentage: 0 });
   const [activeCategory, setActiveCategory] = useState<PackingCategory>('all');
   const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState<
-    Exclude<PackingCategory, 'all'>
-  >('clothing');
+  const [newItemCategory, setNewItemCategory] = useState<Exclude<PackingCategory, 'all'>>('clothing');
 
-  // ---- Computed values ----
+  // Load checklist
+  useEffect(() => {
+    if (!tripId) return;
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        const { data } = await api.get(`/api/trips/${tripId}/checklist`);
+        if (!cancelled) {
+          setItems(data.items ?? []);
+          setStats(data.stats ?? { total: 0, packed: 0, percentage: 0 });
+        }
+      } catch {
+        if (!cancelled) setItems([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [tripId]);
 
+  // Derived
   const filteredItems = useMemo(() => {
     if (activeCategory === 'all') return items;
-    return items.filter((item) => item.category === activeCategory);
+    return items.filter((i) => i.category === activeCategory);
   }, [items, activeCategory]);
 
-  const checkedCount = useMemo(
-    () => items.filter((i) => i.checked).length,
-    [items]
-  );
-  const totalCount = items.length;
-  const progressPercent =
-    totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+  const checkedCount = stats.packed;
+  const totalCount = stats.total;
+  const progressPercent = stats.percentage;
 
-  // ---- Handlers ----
+  // Toggle (PATCH)
+  const handleToggle = useCallback(async (id: string, current: boolean) => {
+    const newVal = !current;
+    setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_packed: newVal } : i));
+    setStats((prev) => {
+      const packed = newVal ? prev.packed + 1 : prev.packed - 1;
+      return { ...prev, packed, percentage: prev.total ? Math.round((packed / prev.total) * 100) : 0 };
+    });
+    try {
+      await api.patch(`/api/trips/${tripId}/checklist/${id}`, { is_packed: newVal });
+    } catch {
+      // revert
+      setItems((prev) => prev.map((i) => i.id === id ? { ...i, is_packed: current } : i));
+    }
+  }, [tripId]);
 
-  const handleToggle = useCallback((id: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, checked: !item.checked } : item
-      )
-    );
-  }, []);
+  // Delete
+  const handleDelete = useCallback(async (id: string) => {
+    const item = items.find((i) => i.id === id);
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    setStats((prev) => {
+      const total = prev.total - 1;
+      const packed = item?.is_packed ? prev.packed - 1 : prev.packed;
+      return { total, packed, percentage: total ? Math.round((packed / total) * 100) : 0 };
+    });
+    try {
+      await api.delete(`/api/trips/${tripId}/checklist/${id}`);
+    } catch {
+      if (item) setItems((prev) => [...prev, item]);
+    }
+  }, [tripId, items]);
 
-  const handleDelete = useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const handleAdd = useCallback(() => {
+  // Add
+  const handleAdd = useCallback(async () => {
     const name = newItemName.trim();
     if (!name) return;
-    const newItem: PackingItem = {
-      id: generateId(),
-      name,
-      category: newItemCategory,
-      checked: false,
-    };
-    setItems((prev) => [...prev, newItem]);
-    setNewItemName('');
-  }, [newItemName, newItemCategory]);
+    try {
+      const { data } = await api.post(`/api/trips/${tripId}/checklist`, {
+        item_name: name,
+        category: newItemCategory,
+      });
+      const newItem = data.item;
+      setItems((prev) => [...prev, newItem]);
+      setStats((prev) => ({ ...prev, total: prev.total + 1 }));
+      setNewItemName('');
+    } catch {
+      console.error('Failed to add item');
+    }
+  }, [tripId, newItemName, newItemCategory]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        handleAdd();
-      }
-    },
-    [handleAdd]
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') handleAdd();
+  }, [handleAdd]);
 
-  const handleCheckAll = useCallback(() => {
-    setItems((prev) => prev.map((item) => ({ ...item, checked: true })));
-  }, []);
+  // Check all / Uncheck all / Reset
+  const handleCheckAll = useCallback(async () => {
+    setItems((prev) => prev.map((i) => ({ ...i, is_packed: true })));
+    setStats((prev) => ({ ...prev, packed: prev.total, percentage: 100 }));
+    try {
+      await Promise.all(
+        items.filter((i) => !i.is_packed).map((i) =>
+          api.patch(`/api/trips/${tripId}/checklist/${i.id}`, { is_packed: true })
+        )
+      );
+    } catch { /* silent */ }
+  }, [tripId, items]);
 
-  const handleUncheckAll = useCallback(() => {
-    setItems((prev) => prev.map((item) => ({ ...item, checked: false })));
-  }, []);
+  const handleUncheckAll = useCallback(async () => {
+    setItems((prev) => prev.map((i) => ({ ...i, is_packed: false })));
+    setStats((prev) => ({ ...prev, packed: 0, percentage: 0 }));
+    try {
+      await Promise.all(
+        items.filter((i) => i.is_packed).map((i) =>
+          api.patch(`/api/trips/${tripId}/checklist/${i.id}`, { is_packed: false })
+        )
+      );
+    } catch { /* silent */ }
+  }, [tripId, items]);
 
-  const handleResetAll = useCallback(() => {
-    setItems([]);
-  }, []);
+  const handleResetAll = useCallback(async () => {
+    try {
+      await Promise.all(items.map((i) => api.delete(`/api/trips/${tripId}/checklist/${i.id}`)));
+      setItems([]);
+      setStats({ total: 0, packed: 0, percentage: 0 });
+    } catch { /* silent */ }
+  }, [tripId, items]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <SpinnerGap size={32} className="animate-spin text-ember-400" />
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
-      {/* ----------------------------------------------------------------- */}
-      {/* Page header                                                       */}
-      {/* ----------------------------------------------------------------- */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
-      >
-        <h1 className="font-display text-3xl font-bold text-charcoal-800">
-          Packing Checklist
-        </h1>
-        <p className="mt-1 text-sm text-charcoal-500">
-          Rajasthan Road Trip &middot; Don&apos;t forget the essentials
-        </p>
+      {/* Page header */}
+      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+        <h1 className="font-display text-3xl font-bold text-charcoal-800">Packing Checklist</h1>
+        <p className="mt-1 text-sm text-charcoal-500">Don&apos;t forget the essentials</p>
       </motion.div>
 
-      {/* ----------------------------------------------------------------- */}
-      {/* Two-column layout: category tabs left, checklist right             */}
-      {/* ----------------------------------------------------------------- */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr]">
-        {/* =============================================================== */}
-        {/* Left column: Category filter tabs                                */}
-        {/* =============================================================== */}
-        <motion.div
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="warm-card p-4 lg:p-5"
-        >
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-charcoal-400">
-            Categories
-          </h2>
+        {/* Category filter */}
+        <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="warm-card p-4 lg:p-5">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-charcoal-400">Categories</h2>
           <nav className="flex flex-row flex-wrap gap-2 lg:flex-col">
             {CATEGORY_TABS.map((tab) => {
               const isActive = activeCategory === tab.id;
-              const count =
-                tab.id === 'all'
-                  ? items.length
-                  : items.filter((i) => i.category === tab.id).length;
+              const count = tab.id === 'all' ? items.length : items.filter((i) => i.category === tab.id).length;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveCategory(tab.id)}
                   className={cn(
                     'inline-flex items-center gap-2 rounded-full px-3 py-2 text-sm font-medium transition-all duration-200 lg:w-full',
-                    isActive
-                      ? 'bg-ember-500 text-white shadow-sm'
-                      : 'bg-sand-50 text-charcoal-600 hover:bg-sand-100'
+                    isActive ? 'bg-ember-500 text-white shadow-sm' : 'bg-sand-50 text-charcoal-600 hover:bg-sand-100'
                   )}
                 >
-                  {tab.id !== 'all' &&
-                    (() => {
-                      const Icon = CATEGORY_META[tab.id].icon;
-                      return <Icon size={15} />;
-                    })()}
+                  {tab.id !== 'all' && (() => { const Icon = CATEGORY_META[tab.id].icon; return <Icon size={15} />; })()}
                   <span>{tab.label}</span>
-                  <span
-                    className={cn(
-                      'ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold',
-                      isActive
-                        ? 'bg-ember-400 text-white'
-                        : 'bg-sand-200 text-charcoal-500'
-                    )}
-                  >
+                  <span className={cn('ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold', isActive ? 'bg-ember-400 text-white' : 'bg-sand-200 text-charcoal-500')}>
                     {count}
                   </span>
                 </button>
@@ -356,20 +318,11 @@ export default function PackingPage() {
           </nav>
         </motion.div>
 
-        {/* =============================================================== */}
-        {/* Right column: Checklist                                          */}
-        {/* =============================================================== */}
-        <motion.div
-          initial={{ opacity: 0, x: 16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="space-y-6"
-        >
-          {/* Add item form */}
+        {/* Checklist */}
+        <motion.div initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
+          {/* Add item */}
           <div className="warm-card p-5">
-            <h2 className="mb-3 font-display text-lg font-bold text-charcoal-800">
-              Add Item
-            </h2>
+            <h2 className="mb-3 font-display text-lg font-bold text-charcoal-800">Add Item</h2>
             <div className="flex flex-col gap-3 sm:flex-row">
               <input
                 type="text"
@@ -381,17 +334,11 @@ export default function PackingPage() {
               />
               <select
                 value={newItemCategory}
-                onChange={(e) =>
-                  setNewItemCategory(
-                    e.target.value as Exclude<PackingCategory, 'all'>
-                  )
-                }
+                onChange={(e) => setNewItemCategory(e.target.value as Exclude<PackingCategory, 'all'>)}
                 className="rounded-xl border border-sand-200 bg-white px-4 py-2.5 text-sm text-charcoal-700 focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-100"
               >
                 {Object.entries(CATEGORY_META).map(([key, meta]) => (
-                  <option key={key} value={key}>
-                    {meta.label}
-                  </option>
+                  <option key={key} value={key}>{meta.label}</option>
                 ))}
               </select>
               <button
@@ -399,9 +346,7 @@ export default function PackingPage() {
                 disabled={!newItemName.trim()}
                 className={cn(
                   'pill-button inline-flex items-center justify-center gap-2 transition-all duration-200',
-                  newItemName.trim()
-                    ? 'bg-ember-500 text-white hover:bg-ember-600'
-                    : 'cursor-not-allowed bg-sand-100 text-charcoal-300'
+                  newItemName.trim() ? 'bg-ember-500 text-white hover:bg-ember-600' : 'cursor-not-allowed bg-sand-100 text-charcoal-300'
                 )}
               >
                 <PlusCircle size={18} weight="fill" />
@@ -413,12 +358,8 @@ export default function PackingPage() {
           {/* Progress bar */}
           <div className="warm-card p-5">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-charcoal-800">
-                {checkedCount} of {totalCount} items packed
-              </span>
-              <span className="text-sm font-bold text-forest-600">
-                {progressPercent}%
-              </span>
+              <span className="text-sm font-semibold text-charcoal-800">{checkedCount} of {totalCount} items packed</span>
+              <span className="text-sm font-bold text-forest-600">{progressPercent}%</span>
             </div>
             <div className="h-3 overflow-hidden rounded-full bg-sand-100">
               <motion.div
@@ -432,58 +373,31 @@ export default function PackingPage() {
 
           {/* Bulk actions */}
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleCheckAll}
-              className="pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-all hover:bg-sand-50"
-            >
-              <Check size={16} weight="bold" />
-              Check All
+            <button onClick={handleCheckAll} className="pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-all hover:bg-sand-50">
+              <Check size={16} weight="bold" />Check All
             </button>
-            <button
-              onClick={handleUncheckAll}
-              className="pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-all hover:bg-sand-50"
-            >
+            <button onClick={handleUncheckAll} className="pill-button inline-flex items-center gap-2 border border-sand-200 bg-white text-charcoal-600 transition-all hover:bg-sand-50">
               Uncheck All
             </button>
-            <button
-              onClick={handleResetAll}
-              className="pill-button inline-flex items-center gap-2 border border-red-200 bg-white text-red-600 transition-all hover:bg-red-50"
-            >
-              <Trash size={16} />
-              Reset All
+            <button onClick={handleResetAll} className="pill-button inline-flex items-center gap-2 border border-red-200 bg-white text-red-600 transition-all hover:bg-red-50">
+              <Trash size={16} />Reset All
             </button>
           </div>
 
-          {/* Checklist items */}
+          {/* Items */}
           <div className="space-y-2">
             <AnimatePresence mode="popLayout">
               {filteredItems.length > 0 ? (
                 filteredItems.map((item) => (
-                  <PackingItemRow
-                    key={item.id}
-                    item={item}
-                    onToggle={handleToggle}
-                    onDelete={handleDelete}
-                  />
+                  <PackingItemRow key={item.id} item={item} onToggle={handleToggle} onDelete={handleDelete} />
                 ))
               ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="flex flex-col items-center py-12 text-center"
-                >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex flex-col items-center py-12 text-center">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
-                    <Package
-                      size={32}
-                      weight="duotone"
-                      className="text-sand-400"
-                    />
+                    <Package size={32} weight="duotone" className="text-sand-400" />
                   </div>
                   <p className="mt-4 text-sm text-charcoal-400">
-                    {activeCategory === 'all'
-                      ? 'No items yet. Add something above.'
-                      : `No items in ${CATEGORY_META[activeCategory]?.label ?? 'this category'}.`}
+                    {activeCategory === 'all' ? 'No items yet. Add something above.' : `No items in ${CATEGORY_META[activeCategory]?.label ?? 'this category'}.`}
                   </p>
                 </motion.div>
               )}

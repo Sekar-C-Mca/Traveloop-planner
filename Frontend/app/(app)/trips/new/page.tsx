@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +23,7 @@ import { z } from 'zod';
 import { cn } from '@/lib/utils';
 import { formatDateRange, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import api from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,23 +46,10 @@ interface AddedCity {
 type TripVisibility = 'public' | 'private';
 
 // ---------------------------------------------------------------------------
-// Mock city search data
+// Mock city search data — now fetched from backend in StepAddCities
 // ---------------------------------------------------------------------------
 
-const cityDatabase: CityResult[] = [
-  { id: 'c1', name: 'Jaipur', country: 'India' },
-  { id: 'c2', name: 'Udaipur', country: 'India' },
-  { id: 'c3', name: 'Jodhpur', country: 'India' },
-  { id: 'c4', name: 'Bali', country: 'Indonesia' },
-  { id: 'c5', name: 'Tokyo', country: 'Japan' },
-  { id: 'c6', name: 'Paris', country: 'France' },
-  { id: 'c7', name: 'Goa', country: 'India' },
-  { id: 'c8', name: 'Dubai', country: 'UAE' },
-  { id: 'c9', name: 'Rome', country: 'Italy' },
-  { id: 'c10', name: 'Barcelona', country: 'Spain' },
-  { id: 'c11', name: 'Jaisalmer', country: 'India' },
-  { id: 'c12', name: 'Pushkar', country: 'India' },
-];
+// Cities are fetched from /api/cities endpoint in StepAddCities component
 
 // ---------------------------------------------------------------------------
 // Zod schemas per step
@@ -351,17 +339,61 @@ function StepAddCities({
 }) {
   const [search, setSearch] = useState('');
   const [showResults, setShowResults] = useState(false);
+  const [allCities, setAllCities] = useState<CityResult[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(true);
+  const [citiesError, setCitiesError] = useState<string | null>(null);
+
+  // Fetch cities from backend on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCities() {
+      try {
+        setCitiesLoading(true);
+        setCitiesError(null);
+        const { data } = await api.get('/api/cities?limit=100');
+        if (!cancelled && data?.cities) {
+          setAllCities(
+            data.cities.map((c: any) => ({
+              id: String(c.id),
+              name: c.name,
+              country: c.country,
+            }))
+          );
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to fetch cities:', err);
+          setCitiesError('Failed to load cities');
+          setAllCities([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setCitiesLoading(false);
+        }
+      }
+    }
+
+    loadCities();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const results = useMemo(() => {
-    if (search.trim().length === 0) return [];
-    const q = search.toLowerCase();
-    return cityDatabase.filter(
+    const q = search.trim().toLowerCase();
+    if (q.length === 0) {
+      return allCities;
+    }
+
+    return allCities.filter(
       (c) =>
         c.name.toLowerCase().includes(q) || c.country.toLowerCase().includes(q)
     );
-  }, [search]);
+  }, [search, allCities]);
 
-  const isTyping = search.trim().length > 0;
+  const filteredCities = results;
 
   return (
     <motion.div
@@ -390,62 +422,101 @@ function StepAddCities({
             // Delay to allow click on results
             setTimeout(() => setShowResults(false), 200);
           }}
-          className="w-full rounded-xl border border-sand-200 bg-white py-3 pl-11 pr-4 text-sm text-charcoal-800 placeholder:text-charcoal-300 focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-100"
+          disabled={citiesLoading}
+          className="w-full rounded-xl border border-sand-200 bg-white py-3 pl-11 pr-4 text-sm text-charcoal-800 placeholder:text-charcoal-300 focus:border-ember-500 focus:outline-none focus:ring-2 focus:ring-ember-100 disabled:opacity-50"
         />
       </div>
 
-      {/* Search results */}
-      {isTyping && showResults && (
+      {/* Loading state */}
+      {citiesLoading && (
+        <div className="space-y-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-12 bg-sand-100 rounded-xl animate-pulse" />
+          ))}
+        </div>
+      )}
+
+      {/* Error state */}
+      {citiesError && (
         <motion.div
-          initial={{ opacity: 0, y: -8 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-h-60 overflow-y-auto rounded-xl border border-sand-200 bg-white shadow-warm"
+          className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600"
         >
-          {results.length === 0 ? (
-            <p className="px-4 py-3 text-sm text-charcoal-400">No cities found</p>
-          ) : (
-            results.map((city) => {
-              const alreadyAdded = cities.some((c) => c.id === city.id);
-              return (
-                <button
-                  key={city.id}
-                  disabled={alreadyAdded}
-                  onClick={() => {
-                    onAddCity(city);
-                    setSearch('');
-                  }}
-                  className={cn(
-                    'flex w-full items-center gap-3 px-4 py-3 text-left transition-colors',
-                    alreadyAdded
-                      ? 'cursor-not-allowed opacity-40'
-                      : 'hover:bg-sand-50'
-                  )}
-                >
-                  <MapPin size={16} className="shrink-0 text-charcoal-400" />
-                  <div>
-                    <p className="text-sm font-medium text-charcoal-800">{city.name}</p>
-                    <p className="text-xs text-charcoal-400">{city.country}</p>
-                  </div>
-                  {alreadyAdded && (
-                    <span className="ml-auto text-xs text-charcoal-400">Added</span>
-                  )}
-                </button>
-              );
-            })
-          )}
+          {citiesError}
         </motion.div>
       )}
 
-      {/* Show hint when not typing but no cities */}
-      {!isTyping && cities.length === 0 && (
-        <div className="flex flex-col items-center py-12 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-sand-100">
-            <MapPin size={32} weight="duotone" className="text-sand-400" />
-          </div>
-          <p className="mt-4 text-sm text-charcoal-400">
-            Start typing to search for cities to add to your trip
+      {/* All cities */}
+      {!citiesLoading && !citiesError && (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-semibold text-charcoal-700">
+            All Cities ({filteredCities.length})
+          </h3>
+          <p className="text-xs text-charcoal-400">
+            Click a city to add it to your trip
           </p>
         </div>
+
+        {showResults && search.trim().length > 0 && filteredCities.length === 0 ? (
+          <div className="space-y-3">
+            <div className="rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm text-charcoal-600">
+              No cities found matching "{search}"
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const customCity: CityResult = {
+                  id: `custom_${Date.now()}`,
+                  name: search.trim(),
+                  country: '',
+                };
+                onAddCity(customCity);
+                setSearch('');
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-ember-300 bg-ember-50 px-4 py-3 text-sm font-medium text-ember-600 transition-colors hover:border-ember-400 hover:bg-ember-100"
+            >
+              <span>✨ Add "{search.trim()}" as a custom city</span>
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <AnimatePresence mode="popLayout">
+              {filteredCities.map((city) => {
+                const alreadyAdded = cities.some((c) => c.id === city.id);
+                return (
+                  <motion.button
+                    key={city.id}
+                    layout
+                    type="button"
+                    disabled={alreadyAdded}
+                    onClick={() => {
+                      onAddCity(city);
+                      setSearch('');
+                    }}
+                    className={cn(
+                      'flex items-center gap-3 rounded-xl border px-4 py-3 text-left transition-colors',
+                      alreadyAdded
+                        ? 'cursor-not-allowed border-sand-200 bg-sand-50 opacity-50'
+                        : 'border-sand-200 bg-white hover:border-ember-300 hover:bg-sand-50'
+                    )}
+                  >
+                    <MapPin size={16} className="shrink-0 text-ember-500" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-charcoal-800">{city.name}</p>
+                      <p className="text-xs text-charcoal-400">{city.country}</p>
+                    </div>
+                    {alreadyAdded && (
+                      <span className="text-xs text-charcoal-400">Added</span>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
+      </div>
       )}
 
       {/* Added cities as chips + date pickers */}
@@ -769,22 +840,51 @@ export default function CreateTripPage() {
     const data = form.getValues();
 
     try {
-      const res = await fetch('/api/trips', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...data,
-          cities,
-          budget: Number(budget) || 0,
-          visibility,
-        }),
+      // Create trip with snake_case fields
+      const tripRes = await api.post('/api/trips', {
+        name: data.name,
+        description: data.description || null,
+        cover_photo_url: data.coverUrl || null,
+        start_date: data.startDate,
+        end_date: data.endDate,
+        currency: data.currency,
+        total_budget: budget ? Number(budget) : null,
+        is_public: visibility === 'public',
       });
 
-      if (!res.ok) throw new Error('Failed to create trip');
+      const tripId = tripRes.data.trip.id;
+
+      // Add cities as stops
+      for (const city of cities) {
+        const cityId = city.id.startsWith('custom_') ? null : parseInt(city.id);
+        
+        // Only add stop if it's a real city (not custom)
+        if (cityId) {
+          const stopPayload: any = {
+            city_id: cityId,
+          };
+          
+          // Only include dates if they're provided
+          if (city.arrivalDate) {
+            stopPayload.arrival_date = city.arrivalDate;
+          }
+          if (city.departureDate) {
+            stopPayload.departure_date = city.departureDate;
+          }
+          
+          try {
+            await api.post(`/api/trips/${tripId}/stops`, stopPayload);
+          } catch (stopErr) {
+            console.error(`Failed to add stop for city ${city.name}:`, stopErr);
+            // Continue with other cities even if one fails
+          }
+        }
+      }
 
       toast.success('Trip created successfully!');
-      router.push('/trips');
-    } catch {
+      router.push(`/trips/${tripId}/view`);
+    } catch (err) {
+      console.error('Trip creation error:', err);
       toast.error('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);

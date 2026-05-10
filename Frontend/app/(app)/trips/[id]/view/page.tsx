@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin,
@@ -34,6 +35,7 @@ import {
   addMonths,
   subMonths,
 } from 'date-fns';
+import api from '@/lib/api';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,143 +104,12 @@ function getCategoryColor(category: string) {
 }
 
 // ---------------------------------------------------------------------------
-// Mock data
+// Mock data — REMOVED, now fetching from API
 // ---------------------------------------------------------------------------
 
-const mockStops: Stop[] = [
-  {
-    id: 'stop-1',
-    city: 'Jaipur',
-    country: 'India',
-    arrivalDate: '2026-07-15',
-    departureDate: '2026-07-18',
-    stayCost: 12000,
-    transportCost: 4500,
-    activities: [
-      {
-        id: 'a-1',
-        name: 'Amber Fort Tour',
-        category: 'sightseeing',
-        scheduledTime: '09:00',
-        scheduledDate: '2026-07-15',
-        cost: 1500,
-      },
-      {
-        id: 'a-2',
-        name: 'Hawa Mahal Visit',
-        category: 'sightseeing',
-        scheduledTime: '14:00',
-        scheduledDate: '2026-07-15',
-        cost: 500,
-      },
-      {
-        id: 'a-3',
-        name: 'Chokhi Dhani Dinner',
-        category: 'food',
-        scheduledTime: '19:00',
-        scheduledDate: '2026-07-16',
-        cost: 2000,
-      },
-    ],
-  },
-  {
-    id: 'stop-2',
-    city: 'Udaipur',
-    country: 'India',
-    arrivalDate: '2026-07-18',
-    departureDate: '2026-07-21',
-    stayCost: 15000,
-    transportCost: 3000,
-    activities: [
-      {
-        id: 'a-4',
-        name: 'City Palace Visit',
-        category: 'sightseeing',
-        scheduledTime: '10:00',
-        scheduledDate: '2026-07-18',
-        cost: 800,
-      },
-      {
-        id: 'a-5',
-        name: 'Traditional Rajasthani Thali',
-        category: 'food',
-        scheduledTime: '13:00',
-        scheduledDate: '2026-07-18',
-        cost: 600,
-      },
-      {
-        id: 'a-6',
-        name: 'Lake Pichola Boat Ride',
-        category: 'relaxation',
-        scheduledTime: '16:00',
-        scheduledDate: '2026-07-19',
-        cost: 1200,
-      },
-    ],
-  },
-  {
-    id: 'stop-3',
-    city: 'Jodhpur',
-    country: 'India',
-    arrivalDate: '2026-07-21',
-    departureDate: '2026-07-24',
-    stayCost: 10000,
-    transportCost: 2500,
-    activities: [
-      {
-        id: 'a-7',
-        name: 'Mehrangarh Fort',
-        category: 'sightseeing',
-        scheduledTime: '08:30',
-        scheduledDate: '2026-07-21',
-        cost: 1000,
-      },
-      {
-        id: 'a-8',
-        name: 'Blue City Walking Tour',
-        category: 'culture',
-        scheduledTime: '15:00',
-        scheduledDate: '2026-07-22',
-        cost: 500,
-      },
-    ],
-  },
-  {
-    id: 'stop-4',
-    city: 'Jaisalmer',
-    country: 'India',
-    arrivalDate: '2026-07-24',
-    departureDate: '2026-07-28',
-    stayCost: 8000,
-    transportCost: 3500,
-    activities: [
-      {
-        id: 'a-9',
-        name: 'Patwon Ki Haveli',
-        category: 'culture',
-        scheduledTime: '09:00',
-        scheduledDate: '2026-07-24',
-        cost: 400,
-      },
-      {
-        id: 'a-10',
-        name: 'Desert Safari',
-        category: 'adventure',
-        scheduledTime: '16:00',
-        scheduledDate: '2026-07-25',
-        cost: 3000,
-      },
-      {
-        id: 'a-11',
-        name: 'Sam Sand Dunes Sunset',
-        category: 'sightseeing',
-        scheduledTime: '18:00',
-        scheduledDate: '2026-07-25',
-        cost: 1500,
-      },
-    ],
-  },
-];
+// Cities are now fetched from the backend
+
+const mockStops: Stop[] = [];
 
 // ---------------------------------------------------------------------------
 // Computed values
@@ -510,17 +381,96 @@ function CalendarMonth({ stops, currentMonth }: CalendarMonthProps) {
 
 type ViewMode = 'list' | 'calendar';
 
+interface TripData {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  stops: any[];
+}
+
 export default function ViewItineraryPage() {
+  const params = useParams();
+  const tripId = params.id as string;
+  
+  const [tripData, setTripData] = useState<TripData | null>(null);
+  const [stops, setStops] = useState<Stop[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 6, 1)); // July 2026
+  const [currentMonth, setCurrentMonth] = useState<Date | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const totalDays = useMemo(() => computeTripDays(mockStops), []);
-  const totalCities = mockStops.length;
-  const totalCost = useMemo(() => computeTotalCost(mockStops), []);
+  // Fetch trip data on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadTrip() {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const { data } = await api.get(`/api/trips/${tripId}`);
+        
+        if (!cancelled && data?.trip) {
+          const trip = data.trip;
+          setTripData(trip);
+          
+          // Transform backend stops to frontend format
+          const transformedStops: Stop[] = (trip.stops || []).map((s: any) => ({
+            id: String(s.id),
+            city: s.city.name,
+            country: s.city.country,
+            arrivalDate: s.arrival_date,
+            departureDate: s.departure_date,
+            stayCost: s.stay_cost || 0,
+            transportCost: s.transport_cost || 0,
+            activities: (s.activities || []).map((a: any) => ({
+              id: String(a.id),
+              name: a.activity.name,
+              category: (a.activity.category_name ?? 'sightseeing').toLowerCase(),
+              scheduledTime: a.scheduled_time || '09:00',
+              scheduledDate: a.scheduled_date,
+              cost: a.custom_cost ?? a.activity.estimated_cost ?? 0,
+            })),
+          }));
+          
+          setStops(transformedStops);
+          
+          // Set initial month to trip start date
+          if (trip.start_date) {
+            const startDate = parseISO(trip.start_date);
+            setCurrentMonth(startOfMonth(startDate));
+          }
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Failed to load trip:', err);
+          setError('Failed to load trip. Please try again.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (tripId) {
+      loadTrip();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tripId]);
+
+  const totalDays = useMemo(() => computeTripDays(stops), [stops]);
+  const totalCities = stops.length;
+  const totalCost = useMemo(() => computeTotalCost(stops), [stops]);
 
   async function handleShare() {
-    const publicUrl = `${window.location.origin}/trips/abc123/share`;
+    const publicUrl = `${window.location.origin}/share/${tripId}`;
     try {
       await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
@@ -542,6 +492,32 @@ export default function ViewItineraryPage() {
     window.print();
   }
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="space-y-6">
+          <div className="h-8 w-1/3 bg-sand-100 rounded animate-pulse" />
+          <div className="h-4 w-1/4 bg-sand-100 rounded animate-pulse" />
+          <div className="mt-8 space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 bg-sand-100 rounded-xl animate-pulse" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !tripData) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
+          <p className="text-red-600">{error || 'Trip not found'}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       {/* ----------------------------------------------------------------- */}
@@ -553,7 +529,7 @@ export default function ViewItineraryPage() {
         className="mb-8"
       >
         <h1 className="font-display text-3xl font-bold text-charcoal-800">
-          Rajasthan Road Trip
+          {tripData.name}
         </h1>
         <p className="mt-1 text-sm text-charcoal-500">
           Your complete itinerary at a glance
@@ -627,9 +603,15 @@ export default function ViewItineraryPage() {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            {mockStops.map((stop) => (
-              <CitySection key={stop.id} stop={stop} />
-            ))}
+            {stops.length === 0 ? (
+              <div className="rounded-xl border border-sand-200 bg-sand-50 p-8 text-center">
+                <p className="text-charcoal-500">No cities added to this trip yet.</p>
+              </div>
+            ) : (
+              stops.map((stop) => (
+                <CitySection key={stop.id} stop={stop} />
+              ))
+            )}
           </motion.div>
         ) : (
           <motion.div
@@ -640,44 +622,48 @@ export default function ViewItineraryPage() {
             transition={{ duration: 0.25 }}
             className="space-y-6"
           >
-            {/* Calendar navigation */}
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl font-bold text-charcoal-800">
-                {format(currentMonth, 'MMMM yyyy')}
-              </h2>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sand-200 text-charcoal-500 transition-colors hover:bg-sand-50"
-                >
-                  &larr;
-                </button>
-                <button
-                  onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sand-200 text-charcoal-500 transition-colors hover:bg-sand-50"
-                >
-                  &rarr;
-                </button>
-              </div>
-            </div>
-
-            <CalendarMonth stops={mockStops} currentMonth={currentMonth} />
-
-            {/* Legend */}
-            <div className="flex items-center gap-4 text-xs text-charcoal-500">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-ember-500" />
-                <span>Trip day</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex gap-0.5">
-                  <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
-                  <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
-                  <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
+            {currentMonth && (
+              <>
+                {/* Calendar navigation */}
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-xl font-bold text-charcoal-800">
+                    {format(currentMonth, 'MMMM yyyy')}
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sand-200 text-charcoal-500 transition-colors hover:bg-sand-50"
+                    >
+                      &larr;
+                    </button>
+                    <button
+                      onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-sand-200 text-charcoal-500 transition-colors hover:bg-sand-50"
+                    >
+                      &rarr;
+                    </button>
+                  </div>
                 </div>
-                <span>Activities</span>
-              </div>
-            </div>
+
+                <CalendarMonth stops={stops} currentMonth={currentMonth} />
+
+                {/* Legend */}
+                <div className="flex items-center gap-4 text-xs text-charcoal-500">
+                  <div className="flex items-center gap-2">
+                    <div className="h-3 w-3 rounded-full bg-ember-500" />
+                    <span>Trip day</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-0.5">
+                      <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
+                      <div className="h-1.5 w-1.5 rounded-full bg-ember-400" />
+                    </div>
+                    <span>Activities</span>
+                  </div>
+                </div>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

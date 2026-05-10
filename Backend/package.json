@@ -8,6 +8,7 @@
     "build": "tsc",
     "start": "node dist/app.js",
     "db:seed": "ts-node-dev --transpile-only src/db/seed.ts",
+    "db:seed-world": "ts-node-dev --transpile-only src/db/seed-world-cities.ts",
     "db:migrate": "ts-node-dev --transpile-only src/db/migrate.ts"
   },
   "dependencies": {
